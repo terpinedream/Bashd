@@ -1,0 +1,5 @@
+#!/bin/bash
+# Simple helper script for pacman update
+# 'pacup' -> sudo pacman -Syu
+
+exec sudo pacman -Syu "$@"

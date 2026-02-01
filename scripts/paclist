@@ -1,0 +1,76 @@
+#!/bin/bash
+# Simple helper script to show a quick list of installed pacman packages
+# 'paclist' -> all packages
+# 'paclist -s' -> packages from stable (core, extra)
+# 'paclist -e' -> packages from extra/multilib
+# 'paclist -t' -> packages from testing
+# 'paclist -c' -> packages that were changed with last update
+# 'paclist -r' -> packages ordered from newest to oldest
+
+PACMAN_DB="/var/lib/pacman/local"
+PACMAN_LOG="/var/log/pacman.log"
+
+list_repo() {
+    local repo="$1"
+    pacman -Qq | while read -r pkg; do
+        repo_name=$(pacman -Qi "$pkg" 2>/dev/null | awk '/^Repository/ { print $3 }')
+        [[ "$repo_name" == "$repo" ]] && echo "$pkg"
+    done
+}
+
+list_stable() {
+    pacman -Qq | while read -r pkg; do
+        repo_name=$(pacman -Qi "$pkg" 2>/dev/null | awk '/^Repository/ { print $3 }')
+        [[ "$repo_name" == "core" || "$repo_name" == "extra" ]] && echo "$pkg"
+    done
+}
+
+list_extra_multilib() {
+    pacman -Qq | while read -r pkg; do
+        repo_name=$(pacman -Qi "$pkg" 2>/dev/null | awk '/^Repository/ { print $3 }')
+        [[ "$repo_name" == "extra" || "$repo_name" == "multilib" ]] && echo "$pkg"
+    done
+}
+
+list_changed() {
+    # Last sync: find last "[ALPM] synchronizing package list"
+    last_sync=$(grep 'synchronizing package list' "$PACMAN_LOG" 2>/dev/null | tail -1)
+    if [[ -z "$last_sync" ]]; then
+        echo "✗ Could not determine last sync from $PACMAN_LOG" >&2
+        return 1
+    fi
+    # Packages upgraded/installed after that (simplified: upgraded in last run)
+    grep -E '\[ALPM\] (upgraded|installed) ' "$PACMAN_LOG" 2>/dev/null | tail -1000 | awk '{print $NF}' | sort -u
+}
+
+list_newest_first() {
+    for dir in "$PACMAN_DB"/*/; do
+        [[ -d "$dir" ]] || continue
+        pkg=$(basename "$dir")
+        mtime=$(stat -c %Y "$dir" 2>/dev/null)
+        echo "$mtime $pkg"
+    done | sort -rn | awk '{print $2}'
+}
+
+if [[ "$1" == "-s" ]]; then
+    list_stable
+elif [[ "$1" == "-e" ]]; then
+    list_extra_multilib
+elif [[ "$1" == "-t" ]]; then
+    list_repo "testing"
+elif [[ "$1" == "-c" ]]; then
+    list_changed
+elif [[ "$1" == "-r" ]]; then
+    list_newest_first
+elif [[ -n "$1" ]]; then
+    echo "Usage: paclist [-s|-e|-t|-c|-r]"
+    echo "  (no option)  All installed packages"
+    echo "  -s           Stable (core + extra)"
+    echo "  -e           Extra / multilib"
+    echo "  -t           Testing repo"
+    echo "  -c           Changed with last update"
+    echo "  -r           Newest to oldest"
+    exit 1
+else
+    pacman -Qq
+fi

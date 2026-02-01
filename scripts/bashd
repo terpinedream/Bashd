@@ -1,0 +1,133 @@
+#!/bin/bash
+# Main entry: print ASCII chart of all Bashd scripts and brief descriptions.
+# bashd --<command>  Show full description of that command in a box with figlet header.
+
+W=70
+# ASCII box: + - |  (compatible with all terminals/fonts)
+top() { printf '+%*s+\n' "$((W - 2))" '' | tr ' ' '-'; }
+bot() { printf '+%*s+\n' "$((W - 2))" '' | tr ' ' '-'; }
+sep() { printf '+%*s+\n' "$((W - 2))" '' | tr ' ' '-'; }
+row() { printf '| %-*s |\n' "$((W - 4))" "$1"; }
+sec() { printf '| %-*s |\n' "$((W - 4))" "$1"; }
+item() { printf '|   %-12s %-*s |\n' "$1" "$((W - 19))" "$2"; }
+
+# Full description for each command (for bashd --<command>)
+get_full_desc() {
+  case "$1" in
+  pacup) echo "Run full system update: sudo pacman -Syu (pass-through args supported)." ;;
+  pacdown) echo "Reverse last pacman update using cached packages (run as root)." ;;
+  pacfind) echo "Find installed package by name or keyword; list files (e.g. pacfind <pkg>)." ;;
+  paclist) echo "List installed packages: no flag = all; -s stable; -e extra/multilib; -t testing; -c changed last update; -r newest to oldest." ;;
+  paclock) echo "Remove /var/lib/pacman/db.lck when pacman is stuck (run as root)." ;;
+  mirrord) echo "Rank pacman mirrors by speed and save to mirrorlist (reflector/rankmirrors). Options: -n N, -c CC, --list-only. Optional config: ~/.config/bashd/mirrord.conf" ;;
+  cleanme) echo "Clear caches: no flag = system + pacman; -p pacman only (root); -s system only (~/.cache, Trash)." ;;
+  cram) echo "Move loose files into a folder: no arg = into the single subdir; cram /path = into /path." ;;
+  crush) echo "Move CWD contents into parent and remove empty CWD. Source bashd-init.sh so running crush also cds to parent (default)." ;;
+  fold) echo "Create a new directory and move loose items into it: fold dirname (files only); fold -a dirname or fold --all dirname (files and dirs)." ;;
+  ufold) echo "Unpack directories in CWD: ufold unpacks all; ufold path unpacks that dir (if in CWD: move; if outside CWD: copy to CWD)." ;;
+  namechange) echo "Mass rename: namechange \"file.txt\" -> file-1.txt, file-2.txt, ... (ignores dirs)." ;;
+  pull) echo "Move one file/dir to parent: pull <file>." ;;
+  archive) echo "Archive to remote/HDD: options -w work, -i image, -v video, -k keys, -c crypt, -p path." ;;
+  bak) echo "Backup CWD to a directory: bak setup <path> to set default; then bak or bak -f; or bak [-f] <path> to override; -f overwrites if destination not empty." ;;
+  pullfrom) echo "Pull from remote: pullfrom <remote_path> <local_path>." ;;
+  pushto) echo "Push to remote: pushto <local_path> <remote_path>." ;;
+  dotsync) echo "Dotfiles sync: dotsync setup <repo>, pull, link, push [-m \"msg\"]; config in ~/.config/bashd/dotsync.conf (REPO=, optional PATHS=)." ;;
+  topd) echo "Top 3 by CPU; press 1/2/3 (or k1/k2/k3) to kill, q to quit. Ignores system-critical processes (WM, compositor, DE, pipewire, etc.). --ignore NAME to also ignore processes whose name contains NAME (repeatable)." ;;
+  *)
+    echo ""
+    return 1
+    ;;
+  esac
+}
+
+# Show full description for one command (bashd --<command>)
+show_command_help() {
+  local cmd="$1"
+  local desc
+  desc=$(get_full_desc "$cmd")
+  if [[ -z "$desc" ]]; then
+    echo "Unknown command: $cmd" >&2
+    echo "Usage: bashd [--<command>]" >&2
+    echo "  No arg: show full script chart. --<command>: show full description for that command." >&2
+    exit 1
+  fi
+  top
+  if command -v figlet &>/dev/null; then
+    figlet -f standard "$cmd" 2>/dev/null | while IFS= read -r line; do
+      row "${line:0:$((W - 4))}"
+    done
+  else
+    row "$cmd"
+  fi
+  row ""
+  # Word-wrap description to box width (portable; fold -s is GNU-only)
+  width=$((W - 4))
+  while read -r line; do
+    while [[ ${#line} -gt width ]]; do
+      chunk="${line:0:$width}"
+      last_space="${chunk% *}"
+      if [[ "$last_space" != "$chunk" ]] && [[ ${#last_space} -gt $((width / 2)) ]]; then
+        row "$last_space"
+        line="${line:${#last_space}+1}"
+      else
+        row "$chunk"
+        line="${line:$width}"
+      fi
+    done
+    [[ -n "$line" ]] && row "$line"
+  done <<<"$desc"
+  row ""
+  bot
+  echo ""
+}
+
+# Parse --<command> flag
+if [[ $# -ge 1 ]] && [[ "$1" == --* ]]; then
+  show_command_help "${1#--}"
+  exit 0
+fi
+
+top
+# Figlet banner inside box header (fallback to plain text if figlet not installed)
+if command -v figlet &>/dev/null; then
+  figlet -f standard "Bashd" 2>/dev/null | while IFS= read -r line; do
+    row "${line:0:$((W - 4))}"
+  done
+else
+  row "Bashd"
+fi
+row ""
+sep
+sec "PACMAN  (scripts/pacman/)"
+item "pacup" "Full system update: pacman -Syu"
+item "pacdown" "Reverse last update from cache (root)"
+item "pacfind" "Find package by name/keyword, list files"
+item "paclist" "List installed pkgs: -s/-e/-t/-c/-r or all"
+item "paclock" "Remove db.lck when pacman is stuck (root)"
+item "mirrord" "Rank mirrors by speed; -n/-c/--list-only"
+row ""
+sep
+sec "CLEANUP  (scripts/cleanup/)"
+item "cleanme" "Clear caches: -p pacman, -s system, or both"
+item "cram" "Move loose files into one folder (or cram /path)"
+item "crush" "Move CWD to parent, remove dir"
+item "fold" "Create dir, move files in; -a includes dirs"
+item "ufold" "Unpack dirs into CWD; (copy if outside)"
+item "namechange" "Mass rename in CWD: namechange \"file.txt\""
+item "pull" "Move one file/dir to parent"
+row ""
+sep
+sec "FILE TRANSFER  (scripts/fileTransfer/)"
+item "archive" "Archive to remote/HDD: -w/-i/-v/-k/-c/-p"
+item "bak" "Backup CWD: bak setup <path>; then bak or bak -f"
+item "pullfrom" "Pull from remote: pullfrom <remote> <local>"
+item "pushto" "Push to remote: pushto <local> <remote>"
+item "dotsync" "Dotfiles: setup, pull, link, push"
+row ""
+sep
+sec "SYSTEM  (scripts/system/)"
+item "topd" "Top 3 by CPU; 1/2/3 to kill. --ignore NAME"
+row ""
+bot
+echo ""
+echo "See README.md for full usage. bashd --<command> for full description (e.g. bashd --crush, bashd --bak)."

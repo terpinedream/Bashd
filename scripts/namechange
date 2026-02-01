@@ -1,0 +1,50 @@
+#!/bin/bash
+# Script to mass rename files
+# 'namechange "name_of_file.txt"' -> all loose files in CWD renamed to file-1.txt, file-2.txt, etc.
+# Ignores directories
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: namechange <template>"
+    echo "  Example: namechange \"file.txt\" -> file-1.txt, file-2.txt, ..."
+    exit 1
+fi
+
+template="$1"
+base="${template%.*}"
+ext=""
+[[ "$template" == *.* ]] && ext=".${template##*.}"
+
+if [[ -z "$base" ]]; then
+    base="file"
+fi
+
+# Collect regular files only, sorted for stable order
+files=()
+while IFS= read -r -d '' f; do
+    [[ -n "$f" ]] && files+=("$f")
+done < <(find . -maxdepth 1 -type f -printf '%P\0' 2>/dev/null | sort -z)
+
+[[ ${#files[@]} -eq 0 ]] && { echo "No files to rename"; exit 0; }
+
+# Two-phase rename to avoid overwriting when target names already exist
+tmp_suffix=".cleanme.$$"
+i=1
+for f in "${files[@]}"; do
+    newname="${base}-${i}${ext}"
+    tmpname="${base}-${i}${ext}${tmp_suffix}"
+    if ! mv "$f" "$tmpname"; then
+        echo "✗ Failed to rename $f"
+        exit 1
+    fi
+    ((i++))
+done
+
+i=1
+for f in "${files[@]}"; do
+    tmpname="${base}-${i}${ext}${tmp_suffix}"
+    newname="${base}-${i}${ext}"
+    mv "$tmpname" "$newname"
+    ((i++))
+done
+
+echo "✓ Renamed ${#files[@]} file(s) to ${base}-N${ext}"

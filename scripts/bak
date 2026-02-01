@@ -1,0 +1,93 @@
+#!/bin/bash
+# Script to copy contents of CWD to specified backup path
+# 'bak setup <path>' -> save default backup directory (use 'bak' or 'bak -f' afterward)
+# 'bak [-f] [path]' -> copy CWD into path (or saved path if no path given)
+# -f: allow overwriting existing files in destination
+
+BAKDEST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/bashd/bak_dest"
+
+read_saved_dest() {
+  [[ -f "$BAKDEST_FILE" ]] && cat "$BAKDEST_FILE"
+}
+
+save_dest() {
+  local path="$1"
+  path=$(realpath -m "$path" 2>/dev/null || echo "$path")
+  mkdir -p "${BAKDEST_FILE%/*}" || {
+    echo "✗ Failed to create config directory"
+    return 1
+  }
+  echo "$path" >"$BAKDEST_FILE" || {
+    echo "✗ Failed to save path"
+    return 1
+  }
+  echo "✓ Default backup path set to: $path"
+}
+
+# bak setup <path>
+if [[ "$1" == "setup" ]]; then
+  if [[ -z "$2" ]]; then
+    echo "Usage: bak setup <backup_directory>"
+    echo "  Saves the path so you can run 'bak' or 'bak -f' without typing it again"
+    exit 1
+  fi
+  save_dest "$2"
+  exit $?
+fi
+
+force=""
+dest=""
+
+if [[ $# -eq 0 ]]; then
+  dest=$(read_saved_dest)
+  if [[ -z "$dest" ]]; then
+    echo "No backup path set. Run: bak setup <backup_directory>"
+    echo "Or specify path: bak [-f] <backup_directory>"
+    exit 1
+  fi
+elif [[ "$1" == "-f" ]]; then
+  if [[ -n "$2" ]]; then
+    force="-f"
+    dest="$2"
+  else
+    dest=$(read_saved_dest)
+    if [[ -z "$dest" ]]; then
+      echo "No backup path set. Run: bak setup <backup_directory>"
+      echo "Or specify path: bak -f <backup_directory>"
+      exit 1
+    fi
+    force="-f"
+  fi
+else
+  dest="$1"
+fi
+
+[[ -z "$dest" ]] && {
+  echo "Usage: bak setup <path>  OR  bak [-f] [path]"
+  exit 1
+}
+
+dest=$(realpath -m "$dest" 2>/dev/null || echo "$dest")
+mkdir -p "$dest" || {
+  echo "✗ Failed to create $dest"
+  exit 1
+}
+
+if [[ -d "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null)" ]] && [[ -z "$force" ]]; then
+  echo "✗ Destination not empty. Use -f to overwrite: bak -f $dest"
+  exit 1
+fi
+
+# Copy all contents (including hidden) into dest
+shopt -s dotglob nullglob
+items=(*)
+shopt -u dotglob nullglob
+for item in "${items[@]}"; do
+  [[ -e "$item" ]] || continue
+  if ! cp -r ${force:+"-f"} "$item" "$dest/"; then
+    echo "✗ Failed to copy $item"
+    exit 1
+  fi
+done
+
+echo "✓ Backed up to $dest"
