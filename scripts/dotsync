@@ -90,7 +90,7 @@ case "${1:-}" in
                 if [[ -e "$backup" ]]; then
                     backup="$dest.bak.$(date +%Y%m%d_%H%M%S)"
                 fi
-                if ! mv "$dest" "$backup"; then
+                if ! mv -- "$dest" "$backup"; then
                     echo "✗ Failed to backup $dest"
                     exit 1
                 fi

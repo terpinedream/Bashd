@@ -16,14 +16,14 @@ unpack_one() {
         name=$(basename "$item")
         [[ "$name" == "." || "$name" == ".." ]] && continue
         if [[ "$do_copy" == true ]]; then
-            cp -r "$item" "$cwd/" || { echo "✗ Failed to copy $item"; return 1; }
+            cp -r -- "$item" "$cwd/" || { echo "✗ Failed to copy $item"; return 1; }
         else
-            mv "$item" "$cwd/" || { echo "✗ Failed to move $item"; return 1; }
+            mv -- "$item" "$cwd/" || { echo "✗ Failed to move $item"; return 1; }
         fi
         ((count++))
     done
     if [[ "$do_copy" != true ]]; then
-        rmdir "$dir" 2>/dev/null || true
+        rmdir -- "$dir" 2>/dev/null || true
     fi
     echo "$count"
 }
@@ -48,7 +48,8 @@ if [[ $# -eq 0 ]]; then
     exit 0
 fi
 
-# Unpack the specified directory
+# Unpack the specified directory (allow -- so paths like -my-dir work)
+[[ "$1" == "--" ]] && shift
 target="$1"
 if [[ ! -d "$target" ]]; then
     echo "✗ Not a directory: $target"

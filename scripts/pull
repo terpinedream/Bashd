@@ -12,12 +12,13 @@ src="$1"
 if [[ ! -e "$src" ]]; then
     echo "✗ No such file or directory: $src"
     exit 1
-fiif [[ ! -f "$src" ]] && [[ ! -d "$src" ]]; then
+fi
+if [[ ! -f "$src" ]] && [[ ! -d "$src" ]]; then
     echo "✗ Not a regular file or directory: $src"
     exit 1
 fi
 
-if mv "$src" ..; then
+if mv -- "$src" ..; then
     echo "✓ Moved $src to parent directory"
 else
     echo "✗ Failed to move $src"

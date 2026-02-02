@@ -4,7 +4,7 @@
 _script="${BASH_SOURCE[0]:-$0}"
 BASHD_DIR="${BASHD_DIR:-$(cd "$(dirname "$_script")" && pwd)}"
 
-export PATH="$PATH:${BASHD_DIR}:${BASHD_DIR}/scripts/pacman:${BASHD_DIR}/scripts/cleanup:${BASHD_DIR}/scripts/fileTransfer:${BASHD_DIR}/scripts/system"
+export PATH="$PATH:${BASHD_DIR}:${BASHD_DIR}/scripts/cleanup:${BASHD_DIR}/scripts/fileTransfer:${BASHD_DIR}/scripts/system"
 
 # crush: move CWD contents to parent, remove dir, and cd to parent (default behavior)
 crush() { eval "$( command crush )"; }

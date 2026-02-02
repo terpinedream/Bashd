@@ -1,21 +1,15 @@
-# Bashd
+```
+ _               _         _   
+| |__   __ _ ___| |__   __| |  
+| '_ \ / _` / __| '_ \ / _` |  
+| |_) | (_| \__ \ | | | (_| |_ 
+|_.__/ \__,_|___/_| |_|\__,_(_)
+```
+*A collection of bash helper scripts for lazy sysadmins*
 
-QOL helper bash scripts for Arch Linux: pacman, cleanup, file transfer, and system utilities.
+### Scripts
 
-## Scripts
-
-### Pacman ([scripts/pacman/](scripts/pacman/))
-
-| Script    | Description |
-|-----------|-------------|
-| **pacup** | Run full system update: `sudo pacman -Syu` (pass-through args supported) |
-| **pacdown** | Reverse last pacman update using cached packages (run as root) |
-| **pacfind** | Find installed package by name or keyword: `pacfind <pkg>` → list files |
-| **paclist** | List installed packages: no flag = all; `-s` stable; `-e` extra/multilib; `-t` testing; `-c` changed last update; `-r` newest→oldest |
-| **paclock** | Remove `/var/lib/pacman/db.lck` when pacman is stuck (run as root) |
-| **mirrord** | Rank pacman mirrors by speed and save to mirrorlist (reflector/rankmirrors): `mirrord [-n N] [-c CC] [--list-only]`; optional config in `~/.config/bashd/mirrord.conf` |
-
-### Cleanup ([scripts/cleanup/](scripts/cleanup/))
+#### [cleanup]
 
 | Script       | Description |
 |--------------|-------------|
@@ -24,10 +18,17 @@ QOL helper bash scripts for Arch Linux: pacman, cleanup, file transfer, and syst
 | **crush**    | Move CWD contents into parent and remove empty CWD; source `bashd-init.sh` so running `crush` also cds to parent (default) |
 | **fold**     | Create a new directory and move loose items into it: `fold dirname` (files only); `fold -a dirname` or `fold --all dirname` (files and dirs) |
 | **ufold**    | Unpack directories in CWD: `ufold` unpacks all; `ufold path` unpacks that dir (if in CWD: move; if outside CWD: copy to CWD) |
-| **namechange** | Mass rename: `namechange "file.txt"` → file-1.txt, file-2.txt, … (ignores dirs) |
+| **namechange** | Mass rename: `namechange "file.txt"` → 1_file.txt, 2_file.txt, … (underscore separator; works with nest) |
 | **pull**     | Move one file/dir to parent: `pull <file>` |
+| **stick**    | Create dir and move items whose name contains dir name: `stick [-i] [-w] <dir_name>`; `-i` case-insensitive, `-w` whole-word only |
+| **flatten**  | Move all files from subdirs into CWD, prefix filenames with path (e.g. `a/b/file.txt` → `a_b_file.txt`); then remove empty dirs |
+| **nest**     | Create subdir from filename prefix (first `_`): `prefix_rest` → `prefix/rest`; one level per run; `nest [delim]` for custom delimiter |
+| **hop**      | Quick dir jumps: `hop N` = up N levels; `hop name` = nearest parent whose basename matches (case-insensitive). Source `bashd-init.sh` so `hop` also cds |
+| **trim**     | Remove empty dirs, zero-byte files, `.DS_Store`, `Thumbs.db`. Prints list and asks for confirmation before deleting. `-r` recursive |
+| **prefix**   | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
+| **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
 
-### File transfer ([scripts/fileTransfer/](scripts/fileTransfer/))
+### [file transfer]
 
 | Script      | Description |
 |-------------|-------------|
@@ -37,32 +38,32 @@ QOL helper bash scripts for Arch Linux: pacman, cleanup, file transfer, and syst
 | **pushto**  | Push to remote: `pushto <local_path> <remote_path>` |
 | **dotsync** | Dotfiles sync: `dotsync setup <repo>`, `pull`, `link`, `push [-m "msg"]`; config in `~/.config/bashd/dotsync.conf` (REPO=, optional PATHS=) |
 
-### System ([scripts/system/](scripts/system/))
+### [system]
 
-| Script  | Description |
-|---------|--------------|
+| Script   | Description |
+|----------|-------------|
 | **topd** | Top 3 by CPU; press 1/2/3 (or k1/k2/k3) to kill, q to quit. Ignores system-critical processes (WM, compositor, DE, pipewire, etc.). `--ignore NAME` to also ignore processes whose name contains NAME (repeatable). |
+| **paclock** | Remove `/var/lib/pacman/db.lck` when pacman is stuck (run as root) |
 
 ## Overview
 
-Run **`bashd`** (from the project root, or with the root on `PATH`) to print an ASCII chart of all scripts and brief descriptions.
+Run **`bashd`** (after installing scripts to `/usr/local/bin` or `/usr/bin`) to print an ASCII chart of all scripts and brief descriptions.
 
 ## Setup
 
-**Recommended:** Source the init file once in your `~/.bashrc` or `~/.zshrc` so scripts are on `PATH` and `crush` changes to the parent directory when you run it:
+**1. Install scripts** — Copy (or symlink) all scripts into a directory on your `PATH`. Recommended:
+
+- **`/usr/local/bin`** — user-installed tools (no root for your own copy if you use a separate prefix)
+- **`/usr/bin`** — system-wide (typically requires root to copy)
+
+Copy every script from the repo (e.g. from `scripts/`, `scripts/cleanup/`, etc.) into one of these directories so that `crush`, `hop`, `bashd`, etc. are on your `PATH`.
+
+**2. Optional: `crush` and `hop` change directory** — By default, `crush` and `hop` only print a `cd` command; the shell does not change directory. To make them change directory when you run them, source the init file once in your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 source /path/to/Bashd/bashd-init.sh
 ```
 
-Replace `/path/to/Bashd` with the actual path to the Bashd repo. That adds the script dirs to `PATH` and defines `crush()` so that running `crush` moves contents, removes the directory, and cds to the parent (default behavior).
+Replace `/path/to/Bashd` with the path to the Bashd repo (or the directory where `bashd-init.sh` lives). That defines `crush()` and `hop()` so that running `crush` or `hop` runs the script and evals its `cd` output. The init file does **not** add scripts to `PATH` — scripts are expected to be installed in `/usr/bin` or `/usr/local/bin` (or elsewhere on `PATH`).
 
-**Alternative:** Add the script dirs to `PATH` manually:
-
-```bash
-export PATH="$PATH:/path/to/Bashd:/path/to/Bashd/scripts/pacman:/path/to/Bashd/scripts/cleanup:/path/to/Bashd/scripts/fileTransfer:/path/to/Bashd/scripts/system"
-chmod +x bashd scripts/*/*
-```
-
-Or symlink the script directories into a single bin dir on `PATH`. Without sourcing `bashd-init.sh`, running `crush` only prints a `cd` command; use `eval $(crush)` to cd, or source the init file for the default behavior.
 

@@ -19,14 +19,14 @@ for item in ./* ./.[!.]* ..?*; do
     [[ -e "$item" ]] || continue
     name=$(basename "$item")
     [[ "$name" == "." || "$name" == ".." ]] && continue
-    if ! mv "$item" "$parent/"; then
+    if ! mv -- "$item" "$parent/"; then
         echo "✗ Failed to move $item" >&2
         exit 1
     fi
 done
 
 cd "$parent" || exit 1
-if rmdir "$cwd" 2>/dev/null; then
+if rmdir -- "$cwd" 2>/dev/null; then
     echo "✓ Moved contents to $parent and removed empty directory" >&2
 else
     echo "✓ Moved contents to $parent (directory not empty or already removed)" >&2

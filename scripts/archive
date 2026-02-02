@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# change to actual hostname
-REMOTE_HOST="remote@host"
-ARCHIVE_BASE="/path/to/archive/drive"
+REMOTE_HOST="HOST@NAME"
+ARCHIVE_BASE="/PATH/TO/DISK"
 ARCHIVE_DIR="$ARCHIVE_BASE"
 CRYPT_MOUNT="$ARCHIVE_BASE/Crypt_decrypted"
 
@@ -42,7 +41,7 @@ while [[ $# -gt 0 ]]; do
     ;;
   -k | --key)
     USE_CRYPT=true
-    ARCHIVE_DIR="$CRYPT_MOUNT/Keys/Laptop"
+    ARCHIVE_DIR="$CRYPT_MOUNT/Keys"
     SOURCE_PATH="$2"
     shift 2
     ;;

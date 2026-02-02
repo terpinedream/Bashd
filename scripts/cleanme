@@ -33,7 +33,7 @@ do_pacman() {
             [[ -e "$f" ]] || continue
             # Keep recent; remove if older than 7 days
             if [[ $(find "$f" -mtime +7 2>/dev/null) ]]; then
-                rm -f "$f" && ((deleted++))
+                rm -f -- "$f" && ((deleted++))
             fi
         done
         echo "✓ Pacman cache: removed $deleted old package(s)"
@@ -45,12 +45,12 @@ do_system() {
     if [[ -d "$HOME/.cache" ]]; then
         # Clear contents, not the dir itself (some apps need .cache to exist)
         count=$(find "$HOME/.cache" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l)
-        rm -rf "$HOME/.cache"/*
+        rm -rf -- "$HOME/.cache"/*
         [[ $count -gt 0 ]] && cleared="$HOME/.cache"
     fi
     if [[ -d "$HOME/.local/share/Trash" ]]; then
-        rm -rf "$HOME/.local/share/Trash/files"/* 2>/dev/null
-        rm -rf "$HOME/.local/share/Trash/info"/* 2>/dev/null
+        rm -rf -- "$HOME/.local/share/Trash/files"/* 2>/dev/null
+        rm -rf -- "$HOME/.local/share/Trash/info"/* 2>/dev/null
         cleared="${cleared:+$cleared, }Trash"
     fi
     if [[ -n "$cleared" ]]; then

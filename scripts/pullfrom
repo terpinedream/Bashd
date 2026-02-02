@@ -9,13 +9,14 @@ fi
 
 REMOTE_PATH="$1"
 LOCAL_PATH="$2"
-REMOTE_HOST="host@name" # replace with actual hostname
+REMOTE_HOST="HOST@NAME"
 
+# Pull file using scp
 scp -r "${REMOTE_HOST}:${REMOTE_PATH}" "$LOCAL_PATH"
 
 # Check if transfer was successful
 if [ $? -eq 0 ]; then
-  echo "✓ Successfully pulled from desktop"
+  echo "✓ Successfully pulled from remote"
 else
   echo "✗ Transfer failed"
   exit 1

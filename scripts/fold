@@ -20,6 +20,12 @@ while [[ $# -gt 0 ]]; do
             ALL=true
             shift
             ;;
+        --)
+            shift
+            DIRNAME="$1"
+            shift
+            break
+            ;;
         -*)
             echo "Unknown option: $1"
             exit 1
@@ -49,7 +55,7 @@ for item in ./* ./.[!.]* ..?*; do
     if [[ "$ALL" != true ]] && [[ -d "$item" ]]; then
         continue
     fi
-    if ! mv "$item" "$DIRNAME/"; then
+    if ! mv -- "$item" "$DIRNAME/"; then
         echo "✗ Failed to move $item"
         exit 1
     fi

@@ -10,7 +10,13 @@ if [[ $# -gt 1 ]]; then
     exit 1
 fi
 
-if [[ $# -eq 1 ]]; then
+if [[ $# -ge 1 ]]; then
+    [[ "$1" == "--" ]] && shift
+    if [[ $# -ne 1 ]]; then
+        echo "Usage: cram [target_directory]" >&2
+        echo "  With arg: move loose files from CWD into target_directory" >&2
+        exit 1
+    fi
     target="$1"
     if [[ ! -d "$target" ]]; then
         echo "✗ Not a directory: $target"
@@ -26,7 +32,7 @@ if [[ $# -eq 1 ]]; then
         real_item=$(realpath "$item" 2>/dev/null || echo "$item")
         real_target=$(realpath "$target" 2>/dev/null || echo "$target")
         [[ "$real_item" == "$real_target" ]] && continue
-        if ! mv "$item" "$target/"; then
+        if ! mv -- "$item" "$target/"; then
             echo "✗ Failed to move $item"
             exit 1
         fi
@@ -56,7 +62,7 @@ for item in ./* ./.[!.]* ..?*; do
     [[ -d "$item" ]] && continue
     name=$(basename "$item")
     [[ "$name" == "." || "$name" == ".." ]] && continue
-    if ! mv "$item" "$target"; then
+    if ! mv -- "$item" "$target"; then
         echo "✗ Failed to move $item"
         exit 1
     fi

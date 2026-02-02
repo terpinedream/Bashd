@@ -84,7 +84,7 @@ items=(*)
 shopt -u dotglob nullglob
 for item in "${items[@]}"; do
   [[ -e "$item" ]] || continue
-  if ! cp -r ${force:+"-f"} "$item" "$dest/"; then
+  if ! cp -r ${force:+"-f"} -- "$item" "$dest/"; then
     echo "✗ Failed to copy $item"
     exit 1
   fi

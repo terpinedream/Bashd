@@ -20,7 +20,7 @@ get_full_desc() {
         crush)     echo "Move CWD contents into parent and remove empty CWD. Source bashd-init.sh so running crush also cds to parent (default)." ;;
         fold)      echo "Create a new directory and move loose items into it: fold dirname (files only); fold -a dirname or fold --all dirname (files and dirs)." ;;
         ufold)     echo "Unpack directories in CWD: ufold unpacks all; ufold path unpacks that dir (if in CWD: move; if outside CWD: copy to CWD)." ;;
-        namechange) echo "Mass rename: namechange \"file.txt\" -> file-1.txt, file-2.txt, ... (ignores dirs)." ;;
+        namechange) echo "Mass rename: namechange \"file.txt\" -> 1_file.txt, 2_file.txt, ... (underscore separator; works with nest)." ;;
         pull)      echo "Move one file/dir to parent: pull <file>." ;;
         stick)     echo "Create dir and move items whose name contains dir name: stick [-i] [-w] <dir_name>; -i case-insensitive, -w whole-word only. Direct children of CWD only." ;;
         flatten)   echo "Move all files from subdirs (any depth) into CWD, prefix each filename with its path (e.g. a/b/file.txt -> a_b_file.txt); then remove empty dirs. Symlinks moved as-is." ;;
@@ -97,13 +97,13 @@ else
 fi
 row ""
 sep
-sec "CLEANUP  (scripts/cleanup/)"
+sec "CLEANUP  (/usr/local/bin or /usr/bin)"
 item "cleanme"     "Clear caches: -p pacman, -s system, or both"
 item "cram"        "Move loose files into one folder (or cram /path)"
 item "crush"       "Move CWD to parent, remove dir"
 item "fold"        "Create dir, move files in; -a includes dirs"
 item "ufold"       "Unpack dirs into CWD; (copy if outside)"
-item "namechange"  "Mass rename in CWD: namechange \"file.txt\""
+item "namechange"  "1_file.txt, 2_file.txt... (underscore for nest)"
 item "pull"        "Move one file/dir to parent"
 item "stick"       "Create dir, move items containing name; -i -w"
 item "flatten"     "Move subdir files to CWD, prefix with path"
@@ -122,7 +122,7 @@ item "pushto"      "Push to remote: pushto <local> <remote>"
 item "dotsync"     "Dotfiles: setup, pull, link, push"
 row ""
 sep
-sec "SYSTEM  (scripts/system/)"
+sec "SYSTEM  (/usr/local/bin or /usr/bin)"
 item "topd"        "Top 3 by CPU; 1/2/3 to kill. --ignore NAME"
 item "paclock"     "Remove db.lck when pacman is stuck (root)"
 row ""

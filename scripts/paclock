@@ -13,7 +13,7 @@ if [[ ! -f "$DB_LOCK" ]]; then
     exit 0
 fi
 
-if rm -f "$DB_LOCK"; then
+if rm -f -- "$DB_LOCK"; then
     echo "✓ Removed $DB_LOCK"
 else
     echo "✗ Failed to remove $DB_LOCK"
