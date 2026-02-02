@@ -10,15 +10,31 @@ unpack_one() {
     local dir="$1"
     local do_copy="${2:-false}"
     local count=0
+    local dirbase
+    dirbase=$(basename "$dir")
     [[ -d "$dir" ]] || return 1
     for item in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
         [[ -e "$item" ]] || continue
         name=$(basename "$item")
         [[ "$name" == "." || "$name" == ".." ]] && continue
-        if [[ "$do_copy" == true ]]; then
-            cp -r -- "$item" "$cwd/" || { echo "✗ Failed to copy $item"; return 1; }
+        # Use dirbase_name so multiple dirs with same filename don't overwrite (e.g. 1/_new.txt -> 1_new.txt)
+        base="$name"
+        ext=""
+        [[ "$base" == *.* ]] && { ext=".${base##*.}"; base="${base%.*}"; }
+        if [[ "$dirbase" == *_ ]] || [[ "$base" == _* ]]; then
+            dest="$cwd/${dirbase}${base}${ext}"
         else
-            mv -- "$item" "$cwd/" || { echo "✗ Failed to move $item"; return 1; }
+            dest="$cwd/${dirbase}_${base}${ext}"
+        fi
+        n=2
+        while [[ -e "$dest" ]]; do
+            [[ -n "$ext" ]] && dest="$cwd/${dirbase}_${base}_${n}${ext}" || dest="$cwd/${dirbase}_${base}_${n}"
+            ((n++))
+        done
+        if [[ "$do_copy" == true ]]; then
+            cp -r -- "$item" "$dest" || { echo "✗ Failed to copy $item"; return 1; }
+        else
+            mv -- "$item" "$dest" || { echo "✗ Failed to move $item"; return 1; }
         fi
         ((count++))
     done
