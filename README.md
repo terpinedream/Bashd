@@ -18,7 +18,7 @@
 | **cleanme**  | Clear caches: no flag = system + pacman; `-p` pacman only (root); `-s` system only (~/.cache, Trash) |
 | **cram**     | Move loose files into a folder: no arg = into the single subdir; `cram /path` = into `/path` |
 | **crush**    | Move CWD contents into parent and remove empty CWD; source `bashd-init.sh` so running `crush` also cds to parent (default) |
-| **fold**     | Create a new directory and move loose items into it: `fold dirname` (files only); `fold -a dirname` or `fold --all dirname` (files and dirs) |
+| **bfold**    | Create a new directory and move loose items into it: `bfold dirname` (files only); `bfold -a dirname` or `bfold --all dirname` (files and dirs) |
 | **ufold**    | Unpack directories in CWD: `ufold` unpacks all; `ufold path` unpacks that dir (if in CWD: move; if outside CWD: copy to CWD) |
 | **namechange** | Mass rename: `namechange "file.txt"` → 1_file.txt, 2_file.txt, … (underscore separator; works with nest) |
 | **pull**     | Move one file/dir to parent: `pull <file>` |

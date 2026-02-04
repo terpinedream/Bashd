@@ -42,7 +42,7 @@ sudo cp scripts/cleanme scripts/cram scripts/crush scripts/fold scripts/ufold \
 
 ```bash
 sudo chmod +x /usr/local/bin/cleanme /usr/local/bin/cram /usr/local/bin/crush \
-  /usr/local/bin/fold /usr/local/bin/ufold /usr/local/bin/namechange \
+  /usr/local/bin/bfold /usr/local/bin/ufold /usr/local/bin/namechange \
   /usr/local/bin/pull /usr/local/bin/stick /usr/local/bin/flatten \
   /usr/local/bin/nest /usr/local/bin/hop /usr/local/bin/trim \
   /usr/local/bin/prefix /usr/local/bin/dedupe /usr/local/bin/archive \
