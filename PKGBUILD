@@ -3,7 +3,7 @@
 # When using GitHub releases, archive extracts to RepoName-pkgver (e.g. Bashd-0.1.0).
 
 pkgname=bashd
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Bulk data management toolkit for Linux — bash scripts for file/directory cleanup, transfer, and organization"
 arch=('any')
