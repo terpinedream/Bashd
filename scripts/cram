@@ -1,0 +1,70 @@
+#!/bin/bash
+# Script to move loose files into directories
+# 'cram' while in a directory containing 1 folder + loose files: moves loose files into that folder
+# 'cram /path' uses /path as target and moves loose files from CWD into it
+
+if [[ $# -gt 1 ]]; then
+    echo "Usage: cram [target_directory]"
+    echo "  No arg: move loose files from CWD into the single subdirectory"
+    echo "  With arg: move loose files from CWD into target_directory"
+    exit 1
+fi
+
+if [[ $# -ge 1 ]]; then
+    [[ "$1" == "--" ]] && shift
+    if [[ $# -ne 1 ]]; then
+        echo "Usage: cram [target_directory]" >&2
+        echo "  With arg: move loose files from CWD into target_directory" >&2
+        exit 1
+    fi
+    target="$1"
+    if [[ ! -d "$target" ]]; then
+        echo "✗ Not a directory: $target"
+        exit 1
+    fi
+    # Move all non-dir items from CWD into target (do not move target itself if it's under CWD)
+    for item in ./* ./.[!.]* ..?*; do
+        [[ -e "$item" ]] || continue
+        name=$(basename "$item")
+        [[ "$name" == "." || "$name" == ".." ]] && continue
+        [[ -d "$item" ]] && continue
+        # Skip if item is the target
+        real_item=$(realpath "$item" 2>/dev/null || echo "$item")
+        real_target=$(realpath "$target" 2>/dev/null || echo "$target")
+        [[ "$real_item" == "$real_target" ]] && continue
+        if ! mv -- "$item" "$target/"; then
+            echo "✗ Failed to move $item"
+            exit 1
+        fi
+    done
+    echo "✓ Moved loose files into $target"
+    exit 0
+fi
+
+# No arg: find single subdirectory in CWD
+shopt -s nullglob
+dirs=(*/)
+shopt -u nullglob
+
+if [[ ${#dirs[@]} -eq 0 ]]; then
+    echo "✗ No subdirectory in current directory"
+    exit 1
+fi
+
+if [[ ${#dirs[@]} -gt 1 ]]; then
+    echo "✗ Multiple subdirectories; specify target: cram <path>"
+    exit 1
+fi
+
+target="${dirs[0]}"
+for item in ./* ./.[!.]* ..?*; do
+    [[ -e "$item" ]] || continue
+    [[ -d "$item" ]] && continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    if ! mv -- "$item" "$target"; then
+        echo "✗ Failed to move $item"
+        exit 1
+    fi
+done
+echo "✓ Moved loose files into $target"

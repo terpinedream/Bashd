@@ -1,0 +1,35 @@
+#!/bin/bash
+# Script to extract contents of a directory into the parent directory
+# EX: User in ~/Documents/example/ runs crush -> contents move to ~/Documents/, dir removed
+# Default (cd to parent): source bashd-init.sh in your shell config so 'crush' is the wrapper that evals the cd
+
+cwd=$(pwd)
+parent=$(dirname "$cwd")
+
+if [[ "$cwd" == "/" ]]; then
+    echo "✗ Refusing to run at root /" >&2
+    exit 1
+fi
+if [[ "$cwd" == "$HOME" ]]; then
+    echo "✗ Refusing to run in home directory" >&2
+    exit 1
+fi
+
+for item in ./* ./.[!.]* ..?*; do
+    [[ -e "$item" ]] || continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    if ! mv -- "$item" "$parent/"; then
+        echo "✗ Failed to move $item" >&2
+        exit 1
+    fi
+done
+
+cd "$parent" || exit 1
+if rmdir -- "$cwd" 2>/dev/null; then
+    echo "✓ Moved contents to $parent and removed empty directory" >&2
+else
+    echo "✓ Moved contents to $parent (directory not empty or already removed)" >&2
+fi
+# Print cd so that crush() wrapper (from bashd-init.sh) can eval it and change to parent in the user's shell
+printf 'cd %q\n' "$parent"

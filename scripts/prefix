@@ -1,0 +1,76 @@
+#!/bin/bash
+# Add to loose filenames in CWD: -d prepend date (YYYY_MM_DD), -p append parent dir name, -i append index.
+# prefix [-d] [-p] [-i]  Flags combinable. Only regular files, direct children.
+
+usage() {
+    echo "Usage: prefix [-d] [-p] [-i]"
+    echo "  -d  Prepend date at beginning (YYYY_MM_DD)"
+    echo "  -p  Append parent directory name at end (before extension)"
+    echo "  -i  Append incremental index (001, 002, ...)"
+    echo "  At least one flag required. Only loose files in CWD."
+    exit 1
+}
+
+DO_DATE=false
+DO_PARENT=false
+DO_INDEX=false
+while getopts "dpi" opt; do
+    case $opt in
+        d) DO_DATE=true ;;
+        p) DO_PARENT=true ;;
+        i) DO_INDEX=true ;;
+        *) usage ;;
+    esac
+done
+shift $((OPTIND-1))
+[[ $# -gt 0 ]] && usage
+[[ "$DO_DATE" != true ]] && [[ "$DO_PARENT" != true ]] && [[ "$DO_INDEX" != true ]] && usage
+
+parent_name=$(basename "$(pwd)")
+date_str=$(date +%Y_%m_%d)
+
+files=()
+for item in ./* ./.[!.]* ..?*; do
+    [[ -e "$item" ]] || continue
+    [[ -f "$item" ]] || continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    files+=("$item")
+done
+[[ ${#files[@]} -eq 0 ]] && { echo "No files to prefix"; exit 0; }
+
+# Sort for stable order
+IFS=$'\n' read -r -d '' -a sorted < <(printf '%s\n' "${files[@]}" | sort) || true
+[[ ${#sorted[@]} -eq 0 ]] && sorted=("${files[@]}")
+
+tmp_suffix=".prefix.$$"
+i=1
+# Phase 1: move to temp names
+for f in "${sorted[@]}"; do
+    [[ -e "$f" ]] || continue
+    base=$(basename "$f")
+    ext=""
+    if [[ "$base" == *.* ]]; then
+        ext=".${base##*.}"
+        base="${base%.*}"
+    fi
+    newbase="$base"
+    [[ "$DO_DATE" == true ]] && newbase="${date_str}_${newbase}"
+    [[ "$DO_PARENT" == true ]] && newbase="${newbase}_${parent_name}"
+    [[ "$DO_INDEX" == true ]] && newbase="${newbase}_$(printf '%03d' "$i")"
+    newname="${newbase}${ext}"
+    n=2
+    while [[ -e "$newname" ]]; do
+        newname="${newbase}_${n}${ext}"
+        ((n++))
+    done
+    mv -- "$f" "${newname}${tmp_suffix}" || { echo "✗ Failed to rename $f" >&2; exit 1; }
+    ((i++))
+done
+# Phase 2: remove temp suffix
+for item in *"${tmp_suffix}"; do
+    [[ -e "$item" ]] || [[ -L "$item" ]] || continue
+    final="${item%${tmp_suffix}}"
+    mv -- "$item" "$final" || { echo "✗ Failed to finalize $item" >&2; exit 1; }
+done
+echo "✓ Prefixed ${#files[@]} file(s)"

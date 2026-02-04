@@ -1,0 +1,114 @@
+#!/bin/bash
+# Show top 3 processes by current CPU usage (from top; ps shows lifetime average).
+# Ignores critical system processes (WM, compositor, DE, etc.) and supports --ignore PROCESSNAME.
+# Press 1, 2, or 3 (or k1, k2, k3) to kill process 1, 2, or 3; q to quit.
+
+# Default: ignore measurement tools and critical system processes (exact or prefix match)
+# Add more processes here or use --ignore PROCESSNAME to ignore specific processes
+DEFAULT_IGNORE=(
+    top ps
+    systemd init
+    Xorg Xwayland
+    Hyprland Sway i3 dwm Mutter kwin kwin_wayland
+    gnome-shell plasmashell cinnamon xfwm4 marco
+    pipewire pulseaudio wireplumber
+    dbus-daemon
+)
+
+# Parse --ignore PROCESSNAME (can be repeated); user patterns are substring match
+IGNORE_LIST=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ignore)
+            [[ -n "${2:-}" ]] && IGNORE_LIST+=("$2")
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: topd [--ignore PROCESSNAME] ..."
+            echo "  Show top 3 by CPU; press 1/2/3 (or k1/k2/k3) to kill, q to quit."
+            echo "  --ignore NAME  Also ignore processes whose name contains NAME (can repeat)"
+            echo "  Default: ignores top, ps, systemd, Xorg, WMs, compositors, DE shells, pipewire, etc."
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+# Returns 0 if process name should be ignored, 1 otherwise
+should_ignore() {
+    local name="$1"
+    local n
+    # Default list: exact or systemd* prefix
+    for n in "${DEFAULT_IGNORE[@]}"; do
+        [[ "$name" == "$n" ]] && return 0
+        [[ "$name" == systemd* ]] && return 0
+    done
+    # User --ignore: substring match
+    for n in "${IGNORE_LIST[@]}"; do
+        [[ -n "$n" ]] && [[ "$name" == *"$n"* ]] && return 0
+    done
+    return 1
+}
+
+while true; do
+    clear 2>/dev/null || true
+    echo "Top 3 by CPU usage (current):"
+    echo ""
+    pids=()
+    # Get more lines so we can filter and still have 3
+    raw=()
+    while IFS= read -r line; do raw+=("$line"); done < <(top -b -n 1 -o %CPU 2>/dev/null | awk '
+        /^[[:space:]]*[0-9]+[[:space:]]/ {
+            pid=$1; cpu=$9; cmd=""; for(i=12;i<=NF;i++) cmd=cmd (i>12?" ":"") $i
+            if (pid != "" && cpu != "" && pid+0 == pid && $12 != "top" && $12 != "ps") print pid, cpu, cmd
+        }
+    ' 2>/dev/null | head -30)
+    if [[ ${#raw[@]} -eq 0 ]]; then
+        while IFS= read -r line; do raw+=("$line"); done < <(ps -eo pid,pcpu,comm --no-headers --sort=-%cpu 2>/dev/null | awk '$3 != "ps" && $3 != "top" { print $1, $2, $3 }' | head -30)
+    fi
+    lines=()
+    for line in "${raw[@]}"; do
+        pid=$(echo "$line" | awk '{print $1}')
+        pcpu=$(echo "$line" | awk '{print $2}')
+        name=$(echo "$line" | awk '{print $3}')
+        [[ -z "$pid" ]] && continue
+        should_ignore "$name" && continue
+        lines+=("$line")
+        [[ ${#lines[@]} -ge 3 ]] && break
+    done
+    for i in "${!lines[@]}"; do
+        line="${lines[$i]}"
+        pid=$(echo "$line" | awk '{print $1}')
+        pcpu=$(echo "$line" | awk '{print $2}')
+        name=$(echo "$line" | awk '{for(i=3;i<=NF;i++) printf "%s%s", $i, (i<NF?OFS:ORS)}')
+        [[ -z "$pid" ]] && continue
+        pids+=("$pid")
+        echo "  $((i+1)). $name (pid $pid) - ${pcpu}% cpu"
+    done
+    echo ""
+    echo -n "Press 1, 2, or 3 to kill (q to quit): "
+
+    key=""
+    read -r -n 1 key
+    if [[ "$key" == "q" ]] || [[ "$key" == "Q" ]]; then
+        echo ""
+        exit 0
+    fi
+    if [[ "$key" == "k" ]] || [[ "$key" == "K" ]]; then
+        read -r -n 1 key
+    fi
+    if [[ "$key" == "1" ]] && [[ -n "${pids[0]:-}" ]]; then
+        kill "${pids[0]}" 2>/dev/null && echo -e "\n✓ Killed pid ${pids[0]}" || echo -e "\n✗ Failed (try sudo?)"
+        sleep 1
+    elif [[ "$key" == "2" ]] && [[ -n "${pids[1]:-}" ]]; then
+        kill "${pids[1]}" 2>/dev/null && echo -e "\n✓ Killed pid ${pids[1]}" || echo -e "\n✗ Failed (try sudo?)"
+        sleep 1
+    elif [[ "$key" == "3" ]] && [[ -n "${pids[2]:-}" ]]; then
+        kill "${pids[2]}" 2>/dev/null && echo -e "\n✓ Killed pid ${pids[2]}" || echo -e "\n✗ Failed (try sudo?)"
+        sleep 1
+    else
+        echo ""
+    fi
+done
