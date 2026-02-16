@@ -9,3 +9,6 @@ export PATH="$PATH:${BASHD_DIR}:${BASHD_DIR}/scripts/cleanup:${BASHD_DIR}/script
 # crush: move CWD contents to parent, remove dir, and cd to parent (default behavior)
 crush() { eval "$(command crush)"; }
 hop() { eval "$(command hop "$@")"; }
+ndir() { eval "$(command ndir "$@")"; }
+cdch() { eval "$(command cdch "$@")"; }
+tmpws() { eval "$(command tmpws)"; }

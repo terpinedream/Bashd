@@ -1,0 +1,38 @@
+#!/bin/bash
+# cdch: cd to the directory containing the most recently modified file.
+# Searches ~/Downloads, ~/Desktop, and CWD by default. Override with CDCH_DIRS="dir1 dir2".
+# Ignores all hidden dirs (~/.config, ~/.local, .git, etc.) so only visible user paths are considered.
+# Output: cd command to stdout so cdch() in bashd-init.sh can eval it.
+# Use case: after downloading a file (e.g. in Firefox), run cdch to jump to that file's directory.
+
+search_dirs="${CDCH_DIRS:-$HOME/Downloads $HOME/Desktop .}"
+
+# Don't descend into any directory whose name starts with . (avoids ~/.config, ~/.local, .git, etc.)
+prune=( \( -type d -name '.*' ! -name . ! -name .. \) -prune -o )
+
+# Prefer GNU find -printf (faster); fallback to perl for portability
+use_printf=false
+if find . -maxdepth 0 -printf '' 2>/dev/null; then
+  use_printf=true
+fi
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+for dir in $search_dirs; do
+  [[ -d "$dir" ]] || continue
+  if [[ "$use_printf" == true ]]; then
+    find "$dir" "${prune[@]}" -type f -printf '%T@\t%p\n' 2>/dev/null
+  else
+    find "$dir" "${prune[@]}" -type f -exec perl -e 'print ((stat($ARGV[0]))[9], "\t", $ARGV[0], "\n")' _ {} \; 2>/dev/null
+  fi
+done | sort -rn -t$'\t' -k1 | head -1 > "$tmp"
+
+if [[ ! -s "$tmp" ]]; then
+  echo "✗ No files found in search dirs (Downloads, Desktop, CWD)" >&2
+  exit 1
+fi
+
+path=$(cut -f2- -d$'\t' < "$tmp")
+target_dir=$(dirname "$path")
+echo "Recently changed: $(basename "$path")" >&2
+printf 'cd %q\n' "$target_dir"

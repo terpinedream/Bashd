@@ -1,0 +1,9 @@
+#!/bin/bash
+# tmpws: create a temp directory, cd into it, and remove it when the shell exits.
+# Output: commands to stdout so tmpws() in bashd-init.sh can eval them.
+# Use case: quick scratch workspace that disappears when you close the terminal.
+
+dir=$(mktemp -d) || exit 1
+printf 'TMPWS_DIR=%q\n' "$dir"
+printf 'cd %q\n' "$dir"
+printf 'trap '\''rm -rf "$TMPWS_DIR"'\'' EXIT\n'

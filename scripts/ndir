@@ -1,0 +1,15 @@
+#!/bin/bash
+# Create a directory and cd into it. Output: cd command to stdout so ndir() in bashd-init.sh can eval it.
+# Usage: ndir <name>  e.g. ndir new -> creates new/ and cd into new/
+
+usage() {
+  echo "Usage: ndir <name>" >&2
+  echo "  Creates <name> and cds into it (e.g. ndir new -> mkdir new && cd new)" >&2
+  exit 1
+}
+
+[[ $# -ne 1 ]] && usage
+name="$1"
+
+mkdir -p "$name" || exit 1
+printf 'cd %q\n' "$(cd "$name" && pwd)"

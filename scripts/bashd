@@ -26,6 +26,8 @@ get_full_desc() {
         flatten)   echo "Move all files from subdirs (any depth) into CWD, prefix each filename with its path (e.g. a/b/file.txt -> a_b_file.txt); then remove empty dirs. Symlinks moved as-is." ;;
         nest)      echo "Create subdir from filename prefix (first delimiter, default _): prefix_rest -> prefix/rest; one level per run. nest [delim] for custom delimiter. Files with no delimiter stay in CWD." ;;
         hop)       echo "Quick dir jumps: hop N = cd up N levels; hop name = cd to nearest parent whose basename matches name (case-insensitive). Source bashd-init.sh so hop also cds (like crush)." ;;
+        ndir)      echo "Create a directory and cd into it: ndir new -> mkdir new and cd to new/. Source bashd-init.sh so ndir also cds." ;;
+        cdch)      echo "Cd to the directory containing the most recently modified file. Searches ~/Downloads, ~/Desktop, and CWD. Override with CDCH_DIRS. Source bashd-init.sh so cdch also cds. Use case: after downloading a file (e.g. in Firefox), run cdch to jump to that file's directory." ;;
         trim)      echo "Safely remove empty dirs, zero-byte files, .DS_Store, Thumbs.db. Prints list and prompts for confirmation before deleting. -r = recursive. No broad patterns (e.g. no *.tmp)." ;;
         prefix)    echo "Add to loose filenames in CWD: -d prepend date (YYYY_MM_DD), -p append parent dir name, -i append index (001, 002, ...). Flags combinable. Two-phase rename to avoid overwrites." ;;
         dedupe)    echo "Find duplicate files by content hash (sha256sum/shasum -a 256); keep first in place, move rest to _dupes/ with disambiguated names. -r = recurse into subdirs. Regular files only." ;;
@@ -109,6 +111,8 @@ item "stick"       "Create dir, move items containing name; -i -w"
 item "flatten"     "Move subdir files to CWD, prefix with path"
 item "nest"        "prefix_rest -> prefix/rest; one level; [delim]"
 item "hop"         "hop N = up N levels; hop name = match parent"
+item "ndir"        "mkdir <name> and cd into it"
+item "cdch"        "cd to dir of most recently modified file"
 item "trim"        "Remove junk + empty dirs; confirm first; -r"
 item "prefix"      "-d date, -p parent, -i index; combinable"
 item "dedupe"      "Duplicates by hash -> _dupes/; -r recurse"
