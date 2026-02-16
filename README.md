@@ -27,7 +27,8 @@
 | **nest**     | Create subdir from filename prefix (first `_`): `prefix_rest` → `prefix/rest`; one level per run; `nest [delim]` for custom delimiter |
 | **hop**      | Quick dir jumps: `hop N` = up N levels; `hop name` = nearest parent whose basename matches (case-insensitive). Source `bashd-init.sh` so `hop` also cds |
 | **ndir**     | Create a directory and cd into it: `ndir new` → `mkdir new` and cd to `new/`. Source `bashd-init.sh` so `ndir` also cds |
-| **cdch**     | Cd to the directory containing the most recently modified file. Searches ~/Downloads, ~/Desktop, and CWD. Override with `CDCH_DIRS`. Source `bashd-init.sh` so `cdch` also cds |
+| **cdch**     | Cd to the directory containing the most recently modified file. Searches ~/Downloads, ~/Desktop, and CWD; ignores hidden dirs (~/.config, etc.). Prints "Recently changed: filename". Override with `CDCH_DIRS`. Source `bashd-init.sh` so `cdch` also cds |
+| **tmpws**    | Create a temp directory, cd into it, and remove it when the shell exits. Source `bashd-init.sh` so `tmpws` also cds; the dir is deleted on terminal close/exit |
 | **trim**     | Remove empty dirs, zero-byte files, `.DS_Store`, `Thumbs.db`. Prints list and asks for confirmation before deleting. `-r` recursive |
 | **prefix**   | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
 | **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
@@ -62,12 +63,12 @@ Run **`bashd`** (after installing scripts to `/usr/local/bin` or `/usr/bin`) to 
 
 Copy every script from the repo (e.g. from `scripts/`, `scripts/cleanup/`, etc.) into one of these directories so that `crush`, `hop`, `bashd`, etc. are on your `PATH`.
 
-**2. Optional: `crush` and `hop` change directory** — By default, `crush` and `hop` only print a `cd` command; the shell does not change directory. To make them change directory when you run them, source the init file once in your `~/.bashrc` or `~/.zshrc`:
+**2. Optional: directory-changing commands** — Scripts that change directory (`crush`, `hop`, `ndir`, `cdch`, `tmpws`) only take effect in your shell if you source the init file once in your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 source /path/to/Bashd/bashd-init.sh
 ```
 
-Replace `/path/to/Bashd` with the path to the Bashd repo (or the directory where `bashd-init.sh` lives). That defines `crush()` and `hop()` so that running `crush` or `hop` runs the script and evals its `cd` output. The init file does **not** add scripts to `PATH` — scripts are expected to be installed in `/usr/bin` or `/usr/local/bin` (or elsewhere on `PATH`).
+Replace `/path/to/Bashd` with the path to the Bashd repo (or the directory where `bashd-init.sh` lives). That defines wrapper functions so that running `crush`, `hop`, `ndir`, `cdch`, or `tmpws` evals the script output and changes directory (and in the case of `tmpws`, registers an EXIT trap to remove the temp dir when the shell exits). The init file does **not** add scripts to `PATH` — scripts are expected to be installed in `/usr/bin` or `/usr/local/bin` (or elsewhere on `PATH`).
 
 
