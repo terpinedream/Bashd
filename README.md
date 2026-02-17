@@ -9,9 +9,9 @@
 
 ![Demo](demo.gif)
 
-### Scripts
+## Scripts
 
-#### [cleanup]
+### [CLEANUP]
 
 | Script       | Description |
 |--------------|-------------|
@@ -34,7 +34,7 @@
 | **prefix**   | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
 | **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
 
-### [file transfer]
+## [FILE TRANSFER]
 
 | Script      | Description |
 |-------------|-------------|
@@ -44,7 +44,7 @@
 | **pushto**  | Push to remote: `pushto <local_path> <remote_path>` |
 | **dotsync** | Dotfiles sync: `dotsync setup <repo>`, `pull`, `link`, `push [-m "msg"]`; config in `~/.config/bashd/dotsync.conf` (REPO=, optional PATHS=) |
 
-### [system]
+## [SYSTEM]
 
 | Script   | Description |
 |----------|-------------|
