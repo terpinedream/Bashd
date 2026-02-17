@@ -20,3 +20,13 @@ tmpws() {
     eval "$(command tmpws "$@")"
   fi
 }
+# qs: quickSearch — menus/prompts go to stderr, only the chosen path to stdout; wrapper cd's there. qs -f runs without capturing stdout so the editor gets a real TTY.
+qs() {
+  local p
+  if [[ "$1" == "-f" || "$1" == "--file" ]]; then
+    command qs "$@"
+  else
+    p=$(command qs "$@")
+    [[ -n "$p" && -d "$p" ]] && cd "$p"
+  fi
+}
