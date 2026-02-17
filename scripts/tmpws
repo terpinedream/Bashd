@@ -1,9 +1,52 @@
 #!/bin/bash
 # tmpws: create a temp directory, cd into it, and remove it when the shell exits.
+# -c/--copy: copy current directory contents into the temp workspace (safe: excludes the temp dir if CWD is its parent).
 # Output: commands to stdout so tmpws() in bashd-init.sh can eval them.
 # Use case: quick scratch workspace that disappears when you close the terminal.
 
+usage() {
+  echo "Usage: tmpws [-c|--copy] [directory]" >&2
+  echo "  tmpws           Create empty temp dir and cd into it (removed on shell exit)" >&2
+  echo "  tmpws -c [dir]   Same, but copy directory contents into the temp dir first (default: CWD)" >&2
+  exit 1
+}
+
+do_copy=false
+copy_from=""
+for arg in "$@"; do
+  case "$arg" in
+    -c|--copy) do_copy=true ;;
+    -h|--help) usage ;;
+    -*) echo "Unknown option: $arg" >&2; usage ;;
+    *) copy_from="$arg"; break ;;
+  esac
+done
+[[ -n "$copy_from" && "$do_copy" != true ]] && { echo "Directory argument only valid with -c" >&2; usage; }
+# If -c was used but no directory given, use current directory
+[[ "$do_copy" == true && -z "$copy_from" ]] && copy_from=$(pwd)
+
 dir=$(mktemp -d) || exit 1
+
+if [[ "$do_copy" == true ]]; then
+  copy_from=$(cd "$copy_from" && pwd) || { rm -rf "$dir"; echo "✗ Cannot read directory: $copy_from" >&2; exit 1; }
+  # Avoid copying the temp dir into itself (e.g. when running tmpws -c from /tmp)
+  if [[ "$dir" == "$copy_from"/* ]] || [[ "$dir" == "$copy_from" ]]; then
+    if command -v rsync &>/dev/null; then
+      rsync -a --exclude="$(basename "$dir")" "$copy_from/" "$dir/" || { rm -rf "$dir"; echo "✗ Copy failed" >&2; exit 1; }
+    else
+      rm -rf "$dir"
+      echo "✗ tmpws -c from this directory would copy the temp dir into itself. Install rsync or run from another directory." >&2
+      exit 1
+    fi
+  else
+    if command -v rsync &>/dev/null; then
+      rsync -a "$copy_from/" "$dir/" || { rm -rf "$dir"; echo "✗ Copy failed" >&2; exit 1; }
+    else
+      cp -a "$copy_from"/. "$dir" || { rm -rf "$dir"; echo "✗ Copy failed" >&2; exit 1; }
+    fi
+  fi
+fi
+
 printf 'TMPWS_DIR=%q\n' "$dir"
 printf 'cd %q\n' "$dir"
 printf 'trap '\''rm -rf "$TMPWS_DIR"'\'' EXIT\n'

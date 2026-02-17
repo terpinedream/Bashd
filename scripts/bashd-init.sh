@@ -11,4 +11,12 @@ crush() { eval "$(command crush)"; }
 hop() { eval "$(command hop "$@")"; }
 ndir() { eval "$(command ndir "$@")"; }
 cdch() { eval "$(command cdch "$@")"; }
-tmpws() { eval "$(command tmpws)"; }
+tmpws() {
+  local need_cwd=false
+  for a in "$@"; do [[ "$a" == "-c" || "$a" == "--copy" ]] && need_cwd=true; done
+  if $need_cwd; then
+    eval "$(command tmpws "$@" "$(pwd)")"
+  else
+    eval "$(command tmpws "$@")"
+  fi
+}
