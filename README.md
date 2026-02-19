@@ -22,6 +22,7 @@
 | **ufold**    | Unpack directories in CWD: `ufold` unpacks all; `ufold path` unpacks that dir (if in CWD: move; if outside CWD: copy to CWD) |
 | **namechange** | Mass rename: `namechange "file.txt"` → 1_file.txt, 2_file.txt, … (underscore separator; works with nest) |
 | **pull**     | Move one file/dir to parent: `pull <file>` |
+| **bring**    | Copy a file or directory into CWD: `bring <path>`. Complements pull |
 | **stick**    | Create dir and move items whose name contains dir name: `stick [-i] [-w] <dir_name>`; `-i` case-insensitive, `-w` whole-word only |
 | **flatten**  | Move all files from subdirs into CWD, prefix filenames with path (e.g. `a/b/file.txt` → `a_b_file.txt`); then remove empty dirs |
 | **nest**     | Create subdir from filename prefix (first `_`): `prefix_rest` → `prefix/rest`; one level per run; `nest [delim]` for custom delimiter |
@@ -31,6 +32,7 @@
 | **tmpws**    | Create a temp directory, cd into it, and remove it when the shell exits. `-c`/`--copy`: copy CWD contents into the temp dir first (safe: excludes temp dir when run from its parent, e.g. /tmp). Source `bashd-init.sh` so `tmpws` also cds; the dir is deleted on terminal close/exit |
 | **qs**       | Quick navigation: `qs` = pick from common dirs and drill down; `qs -s PATTERN` = fuzzy search dirs; `qs -f PATTERN` = search and open file in `$EDITOR`. Source `bashd-init.sh` so `qs` (and `qs -s`) cd into the chosen directory |
 | **trim**     | Remove empty dirs, zero-byte files, `.DS_Store`, `Thumbs.db`. Prints list and asks for confirmation before deleting. `-r` recursive |
+| **empt**     | List what trim would remove (dry run): zero-byte files, .DS_Store, Thumbs.db, empty dirs. `-r` recursive. No deletion |
 | **prefix**   | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
 | **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
 

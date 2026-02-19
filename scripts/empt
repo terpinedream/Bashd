@@ -1,0 +1,51 @@
+#!/bin/bash
+# List what trim would remove: zero-byte files, .DS_Store, Thumbs.db, empty dirs.
+# empt [-r]  -r recursive. No deletion; use as a dry run before trim.
+
+RECURSE=false
+while getopts "r" opt; do
+  case $opt in
+    r) RECURSE=true ;;
+    *) echo "Usage: empt [-r]" >&2; echo "  -r  Recursive (descend into subdirs)" >&2; exit 1 ;;
+  esac
+done
+shift $((OPTIND-1))
+[[ $# -gt 0 ]] && { echo "Usage: empt [-r]" >&2; exit 1; }
+
+to_remove=()
+if [[ "$RECURSE" == true ]]; then
+  while IFS= read -r -d '' f; do
+    [[ -n "$f" ]] && to_remove+=("$f")
+  done < <(find . -type f \( -size 0 -o -name '.DS_Store' -o -name 'Thumbs.db' \) 2>/dev/null | sort -z)
+  while IFS= read -r -d '' d; do
+    [[ -n "$d" ]] && to_remove+=("$d")
+  done < <(find . -mindepth 1 -type d -empty 2>/dev/null | sort -rz)
+else
+  for item in ./* ./.[!.]* ..?*; do
+    [[ -e "$item" ]] || continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    if [[ -f "$item" ]]; then
+      [[ -s "$item" ]] && continue
+      [[ "$name" == ".DS_Store" ]] || [[ "$name" == "Thumbs.db" ]] && { to_remove+=("$item"); continue; }
+      to_remove+=("$item")
+    elif [[ -d "$item" ]]; then
+      shopt -s nullglob
+      contents=("$item"/* "$item"/.[!.]* "$item"/..?*)
+      shopt -u nullglob
+      found=
+      for c in "${contents[@]}"; do [[ -e "$c" ]] && { found=1; break; }; done
+      [[ -z "$found" ]] && to_remove+=("$item")
+    fi
+  done
+fi
+
+if [[ ${#to_remove[@]} -eq 0 ]]; then
+  echo "Nothing to trim (empt = dry run for trim)"
+  exit 0
+fi
+
+echo "Would trim ${#to_remove[@]} item(s) (run trim to remove):"
+for i in "${!to_remove[@]}"; do
+  printf "  %d. %s\n" "$((i+1))" "${to_remove[$i]}"
+done

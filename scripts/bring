@@ -1,0 +1,34 @@
+#!/bin/bash
+# Copy a file or directory into CWD. Complements pull (which moves to parent).
+# Usage: bring <path>
+
+usage() {
+  echo "Usage: bring <path>" >&2
+  echo "  Copies <path> (file or directory) into the current directory" >&2
+  exit 1
+}
+
+[[ $# -ne 1 ]] && usage
+src="$1"
+
+[[ ! -e "$src" ]] && { echo "✗ No such file or directory: $src" >&2; exit 1; }
+[[ ! -f "$src" ]] && [[ ! -d "$src" ]] && { echo "✗ Not a regular file or directory: $src" >&2; exit 1; }
+
+cwd=$(pwd)
+src_abs=$(realpath "$src" 2>/dev/null || (cd "$src" 2>/dev/null && pwd))
+cwd_abs=$(realpath "$cwd" 2>/dev/null || true)
+[[ -z "$cwd_abs" ]] && cwd_abs="$cwd"
+[[ "$src_abs" == "$cwd_abs" ]] && { echo "✗ Cannot copy current directory into itself" >&2; exit 1; }
+
+dest="$cwd/$(basename "$src")"
+if [[ -e "$dest" ]]; then
+  echo "✗ Already exists in CWD: $(basename "$src")" >&2
+  exit 1
+fi
+
+if cp -a -- "$src" "$dest" 2>/dev/null; then
+  echo "✓ Brought $(basename "$src") into $(basename "$cwd")/"
+else
+  echo "✗ Failed to copy $src" >&2
+  exit 1
+fi
