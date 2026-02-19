@@ -36,7 +36,8 @@ get_full_desc() {
         prefix)    echo "Add to loose filenames in CWD: -d prepend date (YYYY_MM_DD), -p append parent dir name, -i append index (001, 002, ...). Flags combinable. Two-phase rename to avoid overwrites." ;;
         dedupe)    echo "Find duplicate files by content hash (sha256sum/shasum -a 256); keep first in place, move rest to _dupes/ with disambiguated names. -r = recurse into subdirs. Regular files only." ;;
         archive)   echo "Archive to remote/HDD: options -w work, -i image, -v video, -k keys, -c crypt, -p path." ;;
-        bak)       echo "Backup CWD to a directory: bak setup <path> to set default; then bak or bak -f; or bak [-f] <path> to override; -f overwrites if destination not empty." ;;
+        bak)       echo "Single-file backup: bak <filename> renames the file to name.ext.bak and creates a copy as name.ext (you keep a working copy and a .bak backup)." ;;
+        bkup)      echo "Backup CWD to a directory: bkup setup <path> to set default; then bkup or bkup -f; or bkup [-f] <path> to override; -f overwrites if destination not empty." ;;
         pullfrom)  echo "Pull from remote: pullfrom <remote_path> <local_path>." ;;
         pushto)    echo "Push to remote: pushto <local_path> <remote_path>." ;;
         dotsync)   echo "Dotfiles sync: dotsync setup <repo>, pull, link, push [-m \"msg\"]; config in ~/.config/bashd/dotsync.conf (REPO=, optional PATHS=)." ;;
@@ -128,7 +129,8 @@ row ""
 sep
 sec "FILE TRANSFER  (scripts/fileTransfer/)"
 item "archive"     "Archive to remote/HDD: -w/-i/-v/-k/-c/-p"
-item "bak"         "Backup CWD: bak setup <path>; then bak or bak -f"
+item "bak"         "Single-file backup: bak <file> -> file.ext.bak + copy"
+item "bkup"        "Backup CWD: bkup setup <path>; then bkup or bkup -f"
 item "pullfrom"    "Pull from remote: pullfrom <remote> <local>"
 item "pushto"      "Push to remote: pushto <local> <remote>"
 item "dotsync"     "Dotfiles: setup, pull, link, push"

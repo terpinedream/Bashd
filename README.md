@@ -41,7 +41,8 @@
 | Script      | Description |
 |-------------|-------------|
 | **archive** | Archive to remote/HDD (options: -w work, -i image, -v video, -k keys, -c crypt, -p path) |
-| **bak**     | Backup CWD to a directory: `bak setup <path>` to set default; then `bak` or `bak -f`; or `bak [-f] <path>` to override; `-f` overwrites if destination not empty |
+| **bak**     | Single-file backup: `bak <file>` renames the file to <name>.<ext>.bak and creates a copy as the original (backup + working copy) |
+| **bkup**    | Backup CWD to a directory: `bkup setup <path>` to set default; then `bkup` or `bkup -f`; or `bkup [-f] <path>`; `-f` overwrites if destination not empty |
 | **pullfrom** | Pull from remote: `pullfrom <remote_path> <local_path>` |
 | **pushto**  | Push to remote: `pushto <local_path> <remote_path>` |
 | **dotsync** | Dotfiles sync: `dotsync setup <repo>`, `pull`, `link`, `push [-m "msg"]`; config in `~/.config/bashd/dotsync.conf` (REPO=, optional PATHS=) |
