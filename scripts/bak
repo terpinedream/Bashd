@@ -11,7 +11,10 @@ usage() {
 [[ $# -ne 1 ]] && usage
 file="$1"
 
-[[ ! -f "$file" ]] && { echo "✗ Not a file or not found: $file" >&2; exit 1; }
+[[ ! -f "$file" ]] && {
+  echo "✗ Not a file or not found: $file" >&2
+  exit 1
+}
 
 base=$(basename "$file")
 dir=$(dirname "$file")
@@ -20,7 +23,10 @@ dir=$(dirname "$file")
 bakname="${base}.bak"
 bakpath="${dir:+$dir/}${bakname}"
 
-[[ -e "$bakpath" ]] && { echo "✗ Backup already exists: $bakpath" >&2; exit 1; }
+[[ -e "$bakpath" ]] && {
+  echo "✗ Backup already exists: $bakpath" >&2
+  exit 1
+}
 
 if mv -- "$file" "$bakpath" && cp -a -- "$bakpath" "$file"; then
   echo "✓ Backed up: $base -> $bakname (working copy: $base)"
