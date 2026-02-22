@@ -35,6 +35,9 @@
 | **trim**     | Remove empty dirs, zero-byte files, `.DS_Store`, `Thumbs.db`. Prints list and asks for confirmation before deleting. `-r` recursive |
 | **empt**     | List what trim would remove (dry run): zero-byte files, .DS_Store, Thumbs.db, empty dirs. `-r` recursive. No deletion |
 | **prefix**   | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
+| **suffix**   | Add suffix before extension: `-d` date, `-p` parent dir name, `-i` index (e.g. base_001.ext). Complements prefix |
+| **byext**    | Move loose files into subdirs by extension: `file.pdf` → `pdf/file.pdf`; no extension → `noext/` |
+| **bydate**   | Move loose files into date dirs by mtime: default `YYYY/MM/DD`; `-M` for `YYYY/MM` only |
 | **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
 
 ## [FILE TRANSFER]
