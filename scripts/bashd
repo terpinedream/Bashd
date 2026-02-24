@@ -32,6 +32,7 @@ get_full_desc() {
   tmpws) echo "Create a temp directory, cd into it, and remove it when the shell exits. -c/--copy: copy CWD contents into the temp dir first. Source bashd-init.sh so tmpws also cds; the dir is deleted on terminal close/exit." ;;
   qs) echo "Quick navigation: qs = pick from common dirs (HOME, Documents, Downloads, etc.) and drill down; qs -s PATTERN = fuzzy search directories; qs -f PATTERN = search for file and open in \$EDITOR. Source bashd-init.sh so qs (and qs -s) cd into the chosen directory." ;;
   clip) echo "Copy a file's contents to clipboard: clip <filename>. Uses wl-copy, xclip, xsel, pbcopy, or clip.exe (first available)." ;;
+  cpath) echo "Copy a path to clipboard: cpath = CWD path; cpath <file_or_dir> = absolute path of that file or directory. Same clipboard tools as clip." ;;
   trim) echo "Safely remove empty dirs, zero-byte files, .DS_Store, Thumbs.db. Prints list and prompts for confirmation before deleting. -r = recursive. No broad patterns (e.g. no *.tmp)." ;;
   empt) echo "List what trim would remove (dry run): zero-byte files, .DS_Store, Thumbs.db, empty dirs. empt [-r]; -r = recursive. No deletion." ;;
   prefix) echo "Add to loose filenames in CWD: -d prepend date (YYYY_MM_DD), -p append parent dir name, -i append index (001, 002, ...). Flags combinable. Two-phase rename to avoid overwrites." ;;
@@ -129,6 +130,7 @@ item "cdch" "cd to dir of most recently modified file"
 item "tmpws" "temp workspace; -c copy CWD; removed on exit"
 item "qs" "quick nav: pick dir or qs -s PATTERN; -f file"
 item "clip" "Copy a file's contents to clipboard"
+item "cpath" "Copy CWD or file/dir path to clipboard"
 item "trim" "Remove junk + empty dirs; confirm first; -r"
 item "empt" "List what trim would remove (dry run); -r"
 item "prefix" "-d date, -p parent, -i index; combinable"
