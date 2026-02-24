@@ -27,6 +27,7 @@ get_full_desc() {
   flatten) echo "Move all files from subdirs (any depth) into CWD, prefix each filename with its path (e.g. a/b/file.txt -> a_b_file.txt); then remove empty dirs. Symlinks moved as-is." ;;
   nest) echo "Create subdir from filename prefix (first delimiter, default _): prefix_rest -> prefix/rest; one level per run. nest [delim] for custom delimiter. Files with no delimiter stay in CWD." ;;
   hop) echo "Quick dir jumps: hop N = cd up N levels; hop name = cd to nearest parent whose basename matches name (case-insensitive). Source bashd-init.sh so hop also cds (like crush)." ;;
+  ld) echo "Cd to the last-used directory (previous CWD). Source bashd-init.sh so the shell records CWD on each prompt and ld changes directory. No args." ;;
   ndir) echo "Create a directory and cd into it: ndir new -> mkdir new and cd to new/. Source bashd-init.sh so ndir also cds." ;;
   cdch) echo "Cd to the directory containing the most recently modified file. Searches ~/Downloads, ~/Desktop, and CWD. Override with CDCH_DIRS. Source bashd-init.sh so cdch also cds. Use case: after downloading a file (e.g. in Firefox), run cdch to jump to that file's directory." ;;
   tmpws) echo "Create a temp directory, cd into it, and remove it when the shell exits. -c/--copy: copy CWD contents into the temp dir first. Source bashd-init.sh so tmpws also cds; the dir is deleted on terminal close/exit." ;;
@@ -125,6 +126,7 @@ item "stick" "Create dir, move items containing name; -i -w"
 item "flatten" "Move subdir files to CWD, prefix with path"
 item "nest" "prefix_rest -> prefix/rest; one level; [delim]"
 item "hop" "hop N = up N levels; hop name = match parent"
+item "ld" "cd to last-used directory (previous CWD)"
 item "ndir" "mkdir <name> and cd into it"
 item "cdch" "cd to dir of most recently modified file"
 item "tmpws" "temp workspace; -c copy CWD; removed on exit"

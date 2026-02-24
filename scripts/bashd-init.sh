@@ -1,13 +1,29 @@
 # Source this once (e.g. in ~/.bashrc or ~/.zshrc) to set up Bashd.
-# Adds script dirs to PATH and defines crush() so that running 'crush' also cds to parent.
+# Adds script dirs to PATH and defines crush(), ld(), etc. so that running them also cds.
 
 _script="${BASH_SOURCE[0]:-$0}"
 BASHD_DIR="${BASHD_DIR:-$(cd "$(dirname "$_script")" && pwd)}"
+BASHD_LASTDIR_FILE="${BASHD_LASTDIR_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/bashd/lastdir}"
 
 export PATH="$PATH:${BASHD_DIR}:${BASHD_DIR}/scripts/cleanup:${BASHD_DIR}/scripts/fileTransfer:${BASHD_DIR}/scripts/system"
 
+# Record previous CWD so 'ld' can return to it (update on each prompt when dir changes)
+mkdir -p "$(dirname "$BASHD_LASTDIR_FILE")" 2>/dev/null
+bashd_save_lastdir() {
+  if [[ -n "${BASHD_CURRENT:-}" && "$PWD" != "$BASHD_CURRENT" ]]; then
+    printf '%s' "$BASHD_CURRENT" > "$BASHD_LASTDIR_FILE"
+  fi
+  BASHD_CURRENT=$PWD
+}
+if [[ -n "${BASH_VERSION:-}" ]]; then
+  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }bashd_save_lastdir"
+elif [[ -n "${ZSH_VERSION:-}" ]]; then
+  precmd_functions+=(bashd_save_lastdir)
+fi
+
 # crush: move CWD contents to parent, remove dir, and cd to parent (default behavior)
 crush() { eval "$(command crush)"; }
+ld() { eval "$(command ld)"; }
 hop() { eval "$(command hop "$@")"; }
 ndir() { eval "$(command ndir "$@")"; }
 cdch() { eval "$(command cdch "$@")"; }
