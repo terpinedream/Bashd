@@ -3,9 +3,9 @@
 | |__   __ _ ___| |__   __| |  
 | '_ \ / _` / __| '_ \ / _` |  
 | |_) | (_| \__ \ | | | (_| |_ 
-|_.__/ \__,_|___/_| |_|\__,_(_)
+|_.__/ \__,_|___/_| |_|\__,_(_) (A collection of bash helper scripts for lazy sysadmins)
 ```
-*A collection of bash helper scripts for lazy sysadmins*
+
 
 ![Demo](demo.gif)
 
