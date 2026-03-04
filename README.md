@@ -38,6 +38,11 @@
 | **empt**     | List what trim would remove (dry run): zero-byte files, .DS_Store, Thumbs.db, empty dirs. `-r` recursive. No deletion |
 | **prefix**   | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
 | **suffix**   | Add suffix before extension: `-d` date, `-p` parent dir name, `-i` index (e.g. base_001.ext). Complements prefix |
+| **rmpfx**    | Remove prefix segments at delimiter: `prefix_rest.ext` → `rest.ext`. `rmpfx [-n N] [delim]`; `-n N` strips N segments (default 1), delim default `_`. Reverses prefix/nest naming |
+| **rmsfx**    | Remove suffix segments at delimiter (before extension): `base_suffix.ext` → `base.ext`. `rmsfx [-n N] [delim]`; `-n N` strips N segments (default 1), delim default `_`. Reverses suffix naming |
+| **recase**   | Batch rename to target case: `-c` camelCase, `-l` lowercase, `-u` UPPERCASE, `-t` Title_Case, `-k` kebab-case. Splits words on `_` `-` space and camelCase boundaries. Extensions stay lowercase |
+| **gaps**     | Re-index numbered files to fill gaps (e.g. `hello_01, hello_03, hello_05` → `hello_01, hello_02, hello_03`). Detects numeric segment at first or last delimiter boundary. `gaps [delim]`; default `_`. Preserves padding width |
+| **undo**     | Reverse the last rename operation (`prefix`, `suffix`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`). Must be run from the same directory. Single-level undo |
 | **byext**    | Move loose files into subdirs by extension: `file.pdf` → `pdf/file.pdf`; no extension → `noext/` |
 | **bydate**   | Move loose files into date dirs by mtime: default `YYYY/MM/DD`; `-M` for `YYYY/MM` only |
 | **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
