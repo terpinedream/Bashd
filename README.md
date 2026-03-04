@@ -32,6 +32,7 @@
 | **cdch**     | Cd to the directory containing the most recently modified file. Searches ~/Downloads, ~/Desktop, and CWD; ignores hidden dirs (~/.config, etc.). Prints "Recently changed: filename". Override with `CDCH_DIRS`. Source `bashd-init.sh` so `cdch` also cds |
 | **tmpws**    | Create a temp directory, cd into it, and remove it when the shell exits. `-c`/`--copy`: copy CWD contents into the temp dir first (safe: excludes temp dir when run from its parent, e.g. /tmp). Source `bashd-init.sh` so `tmpws` also cds; the dir is deleted on terminal close/exit |
 | **qs**       | Quick navigation: `qs` = pick from common dirs and drill down; `qs -s PATTERN` = fuzzy search dirs; `qs -f PATTERN` = search and open file in `$EDITOR`. Source `bashd-init.sh` so `qs` (and `qs -s`) cd into the chosen directory |
+| **bm**       | Directory bookmarks: `bm -a [dir] <name>` to save (CWD if dir omitted); `bm <name>` to jump; `bm -l` to list; `bm -d <name>` to delete. Names can be numbers or strings. Source `bashd-init.sh` so `bm` cds |
 | **clip**     | Copy a file's contents to clipboard: `clip <filename>` (uses wl-copy/xclip/xsel/pbcopy/clip.exe fallback) |
 | **cpath**    | Copy a path to clipboard: `cpath` = CWD; `cpath <file_or_dir>` = that path (absolute) |
 | **trim**     | Remove empty dirs, zero-byte files, `.DS_Store`, `Thumbs.db`. Prints list and asks for confirmation before deleting. `-r` recursive |
@@ -78,12 +79,12 @@ Run **`bashd`** (after installing scripts to `/usr/local/bin` or `/usr/bin`) to 
 
 Copy every script from the repo (e.g. from `scripts/`, `scripts/cleanup/`, etc.) into one of these directories so that `crush`, `hop`, `bashd`, etc. are on your `PATH`.
 
-**2. Optional: directory-changing commands** — Scripts that change directory (`crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`) only take effect in your shell if you source the init file once in your `~/.bashrc` or `~/.zshrc`:
+**2. Optional: directory-changing commands** — Scripts that change directory (`crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, `bm`) only take effect in your shell if you source the init file once in your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 source /path/to/Bashd/bashd-init.sh
 ```
 
-Replace `/path/to/Bashd` with the path to the Bashd repo (or the directory where `bashd-init.sh` lives). That defines wrapper functions so that running `crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, or `qs` evals the script output and changes directory (and in the case of `tmpws`, registers an EXIT trap to remove the temp dir when the shell exits). The init file does **not** add scripts to `PATH` — scripts are expected to be installed in `/usr/bin` or `/usr/local/bin` (or elsewhere on `PATH`).
+Replace `/path/to/Bashd` with the path to the Bashd repo (or the directory where `bashd-init.sh` lives). That defines wrapper functions so that running `crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, or `bm` evals the script output and changes directory (and in the case of `tmpws`, registers an EXIT trap to remove the temp dir when the shell exits). The init file does **not** add scripts to `PATH` — scripts are expected to be installed in `/usr/bin` or `/usr/local/bin` (or elsewhere on `PATH`).
 
 

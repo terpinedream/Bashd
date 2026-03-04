@@ -32,6 +32,7 @@ get_full_desc() {
   cdch) echo "Cd to the directory containing the most recently modified file. Searches ~/Downloads, ~/Desktop, and CWD. Override with CDCH_DIRS. Source bashd-init.sh so cdch also cds. Use case: after downloading a file (e.g. in Firefox), run cdch to jump to that file's directory." ;;
   tmpws) echo "Create a temp directory, cd into it, and remove it when the shell exits. -c/--copy: copy CWD contents into the temp dir first. Source bashd-init.sh so tmpws also cds; the dir is deleted on terminal close/exit." ;;
   qs) echo "Quick navigation: qs = pick from common dirs (HOME, Documents, Downloads, etc.) and drill down; qs -s PATTERN = fuzzy search directories; qs -f PATTERN = search for file and open in \$EDITOR. Source bashd-init.sh so qs (and qs -s) cd into the chosen directory." ;;
+  bm) echo "Directory bookmarks: bm -a [dir] <name> to save (CWD if dir omitted); bm <name> to jump; bm -l to list; bm -d <name> to delete. Names can be numbers or strings (e.g. bm -a . work, then bm work). Source bashd-init.sh so bm <name> cds." ;;
   clip) echo "Copy a file's contents to clipboard: clip <filename>. Uses wl-copy, xclip, xsel, pbcopy, or clip.exe (first available)." ;;
   cpath) echo "Copy a path to clipboard: cpath = CWD path; cpath <file_or_dir> = absolute path of that file or directory. Same clipboard tools as clip." ;;
   trim) echo "Safely remove empty dirs, zero-byte files, .DS_Store, Thumbs.db. Prints list and prompts for confirmation before deleting. -r = recursive. No broad patterns (e.g. no *.tmp)." ;;
@@ -136,6 +137,7 @@ item "ndir" "mkdir <name> and cd into it"
 item "cdch" "cd to dir of most recently modified file"
 item "tmpws" "temp workspace; -c copy CWD; removed on exit"
 item "qs" "quick nav: pick dir or qs -s PATTERN; -f file"
+item "bm" "bm -a [dir] name; bm name; -l list; -d del"
 item "clip" "Copy a file's contents to clipboard"
 item "cpath" "Copy CWD or file/dir path to clipboard"
 item "trim" "Remove junk + empty dirs; confirm first; -r"

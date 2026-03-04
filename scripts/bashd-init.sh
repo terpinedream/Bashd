@@ -27,6 +27,13 @@ ld() { eval "$(command ld)"; }
 hop() { eval "$(command hop "$@")"; }
 ndir() { eval "$(command ndir "$@")"; }
 cdch() { eval "$(command cdch "$@")"; }
+bm() {
+  if [[ "$1" == "-a" || "$1" == "-d" || "$1" == "-l" ]]; then
+    command bm "$@"
+  else
+    eval "$(command bm "$@")"
+  fi
+}
 tmpws() {
   local need_cwd=false
   for a in "$@"; do [[ "$a" == "-c" || "$a" == "--copy" ]] && need_cwd=true; done
