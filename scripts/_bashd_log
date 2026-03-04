@@ -1,0 +1,22 @@
+#!/bin/bash
+# Shared rename-logging helper. Source this from rename scripts to enable undo.
+# Usage: source "$(dirname "$0")/_bashd_log"
+#   bashd_log_start "cmd_name"   -- begin a new log (clears previous)
+#   bashd_log "old_name" "new"   -- record one rename (basenames)
+#   bashd_log_finish             -- (reserved for future use)
+
+_BASHD_LOG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/bashd"
+_BASHD_LOG_FILE="$_BASHD_LOG_DIR/last_rename"
+
+bashd_log_start() {
+  mkdir -p "$_BASHD_LOG_DIR"
+  printf 'CMD:%s\nDIR:%s\n' "$1" "$(pwd)" > "$_BASHD_LOG_FILE"
+}
+
+bashd_log() {
+  printf '%s\t%s\n' "$1" "$2" >> "$_BASHD_LOG_FILE"
+}
+
+bashd_log_finish() {
+  :
+}

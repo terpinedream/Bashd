@@ -1,0 +1,81 @@
+#!/bin/bash
+# Remove suffix from filenames at delimiter (before extension). base_suffix.ext -> base.ext. Files
+# without enough delimiter segments are skipped. rmsfx [-n N] [delim]  Default: strip 1, delimiter _.
+
+usage() {
+  echo "Usage: rmsfx [-n N] [delim]" >&2
+  echo "  -n N   Strip N suffix segments (default 1)" >&2
+  echo "  delim  Delimiter character (default _)" >&2
+  echo "  Files with fewer segments than N are skipped." >&2
+  exit 1
+}
+
+COUNT=1
+while getopts "n:" opt; do
+  case $opt in
+    n) COUNT="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND-1))
+
+delim="_"
+[[ $# -gt 1 ]] && usage
+[[ $# -eq 1 ]] && delim="$1"
+[[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || { echo "✗ -n must be a positive integer" >&2; exit 1; }
+
+source "$(dirname "$(readlink -f "$0")")/_bashd_log"
+
+files=()
+for item in ./* ./.[!.]* ..?*; do
+  [[ -e "$item" ]] || continue
+  [[ -f "$item" ]] || continue
+  name=$(basename "$item")
+  [[ "$name" == "." || "$name" == ".." ]] && continue
+  files+=("$item")
+done
+[[ ${#files[@]} -eq 0 ]] && { echo "No files to rename"; exit 0; }
+
+IFS=$'\n' read -r -d '' -a sorted < <(printf '%s\n' "${files[@]}" | sort) || true
+[[ ${#sorted[@]} -eq 0 ]] && sorted=("${files[@]}")
+
+tmp_suffix=".rmsfx.$$"
+bashd_log_start "rmsfx"
+renamed=0
+for f in "${sorted[@]}"; do
+  [[ -e "$f" ]] || continue
+  base=$(basename "$f")
+  ext=""
+  if [[ "$base" == *.* ]]; then
+    ext=".${base##*.}"
+    base="${base%.*}"
+  fi
+
+  keep="$base"
+  for ((j = 0; j < COUNT; j++)); do
+    [[ "$keep" != *"$delim"* ]] && { keep=""; break; }
+    keep="${keep%"$delim"*}"
+  done
+  [[ -z "$keep" ]] && continue
+
+  newname="${keep}${ext}"
+  [[ "$newname" == "$(basename "$f")" ]] && continue
+
+  n=2
+  while [[ -e "$newname" ]] || [[ -e "${newname}${tmp_suffix}" ]]; do
+    newname="${keep}_${n}${ext}"
+    ((n++))
+  done
+  mv -- "$f" "${newname}${tmp_suffix}" || { echo "✗ Failed to rename $f" >&2; exit 1; }
+  bashd_log "$(basename "$f")" "$newname"
+  ((renamed++))
+done
+
+for item in *"${tmp_suffix}"; do
+  [[ -e "$item" ]] || [[ -L "$item" ]] || continue
+  final="${item%${tmp_suffix}}"
+  mv -- "$item" "$final" || { echo "✗ Failed to finalize $item" >&2; exit 1; }
+done
+
+[[ $renamed -eq 0 ]] && { echo "No files matched (need at least $COUNT delimiter segment(s))"; exit 0; }
+echo "✓ Stripped suffix from $renamed file(s)"

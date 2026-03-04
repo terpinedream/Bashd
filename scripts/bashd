@@ -38,6 +38,11 @@ get_full_desc() {
   empt) echo "List what trim would remove (dry run): zero-byte files, .DS_Store, Thumbs.db, empty dirs. empt [-r]; -r = recursive. No deletion." ;;
   prefix) echo "Add to loose filenames in CWD: -d prepend date (YYYY_MM_DD), -p append parent dir name, -i append index (001, 002, ...). Flags combinable. Two-phase rename to avoid overwrites." ;;
   suffix) echo "Add suffix before extension: -d date, -p parent dir name, -i index (e.g. base_001.ext). suffix [-d] [-p] [-i]. Complements prefix. Only loose files in CWD." ;;
+  rmpfx) echo "Remove prefix segments from filenames at delimiter: prefix_rest.ext -> rest.ext. rmpfx [-n N] [delim]; -n N strips N segments (default 1), delim default _. Files with fewer segments are skipped. Reverses prefix/nest naming." ;;
+  rmsfx) echo "Remove suffix segments from filenames at delimiter (before extension): base_suffix.ext -> base.ext. rmsfx [-n N] [delim]; -n N strips N segments (default 1), delim default _. Reverses suffix naming." ;;
+  recase) echo "Batch rename loose files in CWD to a target case. Splits words on _ - space and camelCase boundaries, then reassembles: -c camelCase, -l lowercase (_), -u UPPERCASE (_), -t Title_Case (_), -k kebab-case (-). Extensions always stay lowercase. Exactly one flag required." ;;
+  undo) echo "Reverse the last rename operation (prefix, suffix, rmpfx, rmsfx, recase, namechange, gaps). Must be run from the same directory where the rename occurred. Single-level undo; each rename overwrites the previous log." ;;
+  gaps) echo "Re-index numbered files to fill gaps (e.g. hello_01, hello_03, hello_05 -> hello_01, hello_02, hello_03). Detects numeric segment at the first or last delimiter boundary. gaps [delim]; default delimiter _. Preserves padding width. Single-file groups and files without a numeric segment are skipped." ;;
   byext) echo "Move loose files in CWD into subdirs by extension: file.pdf -> pdf/file.pdf; files with no extension go into noext/." ;;
   bydate) echo "Move loose files in CWD into date subdirs by mtime. Default: YYYY/MM/DD. -M for YYYY/MM only. bydate [-M]." ;;
   dedupe) echo "Find duplicate files by content hash (sha256sum/shasum -a 256); keep first in place, move rest to _dupes/ with disambiguated names. -r = recurse into subdirs. Regular files only." ;;
@@ -137,6 +142,11 @@ item "trim" "Remove junk + empty dirs; confirm first; -r"
 item "empt" "List what trim would remove (dry run); -r"
 item "prefix" "-d date, -p parent, -i index; combinable"
 item "suffix" "-d date, -p parent, -i index; before ext"
+item "rmpfx" "Strip prefix at delim; -n N [delim]"
+item "rmsfx" "Strip suffix at delim; -n N [delim]"
+item "recase" "-c camel -l lower -u upper -t title -k kebab"
+item "gaps" "Re-index numbered files to fill gaps"
+item "undo" "Reverse last rename (single-level)"
 item "byext" "Move files into ext/ dirs (noext if no ext)"
 item "bydate" "Move files into YYYY/MM/DD dirs; -M month"
 item "dedupe" "Duplicates by hash -> _dupes/; -r recurse"

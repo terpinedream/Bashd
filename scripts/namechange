@@ -18,6 +18,8 @@ if [[ -z "$base" ]]; then
     base="file"
 fi
 
+source "$(dirname "$(readlink -f "$0")")/_bashd_log"
+
 # Collect regular files only, sorted for stable order
 files=()
 while IFS= read -r -d '' f; do
@@ -28,6 +30,7 @@ done < <(find . -maxdepth 1 -type f -printf '%P\0' 2>/dev/null | sort -z)
 
 # Two-phase rename: N_base.ext (underscore separator for nest synergy)
 tmp_suffix=".cleanme.$$"
+bashd_log_start "namechange"
 i=1
 for f in "${files[@]}"; do
     newname="${i}_${base}${ext}"
@@ -36,6 +39,7 @@ for f in "${files[@]}"; do
         echo "✗ Failed to rename $f"
         exit 1
     fi
+    bashd_log "$f" "$newname"
     ((i++))
 done
 
