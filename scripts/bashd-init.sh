@@ -34,6 +34,16 @@ bm() {
     eval "$(command bm "$@")"
   fi
 }
+# mark: session breadcrumb trail — file lives in /tmp, cleaned up on shell exit
+export BASHD_MARK_FILE="/tmp/bashd_marks_$$"
+trap 'rm -f "$BASHD_MARK_FILE"' EXIT
+mark() {
+  if [[ "${1:-}" == "-a" || "${1:-}" == "-l" ]]; then
+    command mark "$@"
+  else
+    eval "$(command mark "$@")"
+  fi
+}
 tmpws() {
   local need_cwd=false
   for a in "$@"; do [[ "$a" == "-c" || "$a" == "--copy" ]] && need_cwd=true; done

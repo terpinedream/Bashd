@@ -43,7 +43,10 @@
 | **rmsfx**    | Remove suffix segments at delimiter (before extension): `base_suffix.ext` → `base.ext`. `rmsfx [-n N] [delim]`; `-n N` strips N segments (default 1), delim default `_`. Reverses suffix naming |
 | **recase**   | Batch rename to target case: `-c` camelCase, `-l` lowercase, `-u` UPPERCASE, `-t` Title_Case, `-k` kebab-case. Splits words on `_` `-` space and camelCase boundaries. Extensions stay lowercase |
 | **gaps**     | Re-index numbered files to fill gaps (e.g. `hello_01, hello_03, hello_05` → `hello_01, hello_02, hello_03`). Detects numeric segment at first or last delimiter boundary. `gaps [delim]`; default `_`. Preserves padding width |
-| **undo**     | Reverse the last rename operation (`prefix`, `suffix`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`). Must be run from the same directory. Single-level undo |
+| **undo**     | Reverse the last rename operation (`prefix`, `suffix`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`, `lower`). Must be run from the same directory. Single-level undo |
+| **lower**    | Sanitize filenames: lowercase, spaces/special chars to underscores, collapse runs. `My File (Copy) [2].jpg` → `my_file_copy_2.jpg`. Supports undo |
+| **split**    | Split loose files into N roughly equal subdirectories: `split 3` creates `part_1/`, `part_2/`, `part_3/` and distributes round-robin |
+| **mark**     | Session breadcrumb trail: `mark -a` to drop a mark at CWD, `mark -l` to list, `mark` to pick and jump. Per-terminal session, clears on shell exit. Source `bashd-init.sh` |
 | **byext**    | Move loose files into subdirs by extension: `file.pdf` → `pdf/file.pdf`; no extension → `noext/` |
 | **bydate**   | Move loose files into date dirs by mtime: default `YYYY/MM/DD`; `-M` for `YYYY/MM` only |
 | **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
@@ -79,12 +82,12 @@ Run **`bashd`** (after installing scripts to `/usr/local/bin` or `/usr/bin`) to 
 
 Copy every script from the repo (e.g. from `scripts/`, `scripts/cleanup/`, etc.) into one of these directories so that `crush`, `hop`, `bashd`, etc. are on your `PATH`.
 
-**2. Optional: directory-changing commands** — Scripts that change directory (`crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, `bm`) only take effect in your shell if you source the init file once in your `~/.bashrc` or `~/.zshrc`:
+**2. Optional: directory-changing commands** — Scripts that change directory (`crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, `bm`, `mark`) only take effect in your shell if you source the init file once in your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 source /path/to/Bashd/bashd-init.sh
 ```
 
-Replace `/path/to/Bashd` with the path to the Bashd repo (or the directory where `bashd-init.sh` lives). That defines wrapper functions so that running `crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, or `bm` evals the script output and changes directory (and in the case of `tmpws`, registers an EXIT trap to remove the temp dir when the shell exits). The init file does **not** add scripts to `PATH` — scripts are expected to be installed in `/usr/bin` or `/usr/local/bin` (or elsewhere on `PATH`).
+Replace `/path/to/Bashd` with the path to the Bashd repo (or the directory where `bashd-init.sh` lives). That defines wrapper functions so that running `crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, `bm`, or `mark` evals the script output and changes directory (and in the case of `tmpws`, registers an EXIT trap to remove the temp dir when the shell exits). The init file does **not** add scripts to `PATH` — scripts are expected to be installed in `/usr/bin` or `/usr/local/bin` (or elsewhere on `PATH`).
 
 

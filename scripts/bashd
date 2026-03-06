@@ -42,8 +42,11 @@ get_full_desc() {
   rmpfx) echo "Remove prefix segments from filenames at delimiter: prefix_rest.ext -> rest.ext. rmpfx [-n N] [delim]; -n N strips N segments (default 1), delim default _. Files with fewer segments are skipped. Reverses prefix/nest naming." ;;
   rmsfx) echo "Remove suffix segments from filenames at delimiter (before extension): base_suffix.ext -> base.ext. rmsfx [-n N] [delim]; -n N strips N segments (default 1), delim default _. Reverses suffix naming." ;;
   recase) echo "Batch rename loose files in CWD to a target case. Splits words on _ - space and camelCase boundaries, then reassembles: -c camelCase, -l lowercase (_), -u UPPERCASE (_), -t Title_Case (_), -k kebab-case (-). Extensions always stay lowercase. Exactly one flag required." ;;
-  undo) echo "Reverse the last rename operation (prefix, suffix, rmpfx, rmsfx, recase, namechange, gaps). Must be run from the same directory where the rename occurred. Single-level undo; each rename overwrites the previous log." ;;
+  undo) echo "Reverse the last rename operation (prefix, suffix, rmpfx, rmsfx, recase, namechange, gaps, lower). Must be run from the same directory where the rename occurred. Single-level undo; each rename overwrites the previous log." ;;
   gaps) echo "Re-index numbered files to fill gaps (e.g. hello_01, hello_03, hello_05 -> hello_01, hello_02, hello_03). Detects numeric segment at the first or last delimiter boundary. gaps [delim]; default delimiter _. Preserves padding width. Single-file groups and files without a numeric segment are skipped." ;;
+  lower) echo "Sanitize filenames: lowercase, replace spaces/special chars with underscores, collapse runs. My File (Copy) [2].jpg -> my_file_copy_2.jpg. Extensions stay lowercase. Supports undo." ;;
+  split) echo "Split loose files in CWD into N roughly equal subdirectories: split 3 creates part_1/, part_2/, part_3/ and distributes files round-robin. N must be at least 2 and no greater than file count." ;;
+  mark) echo "Session breadcrumb trail: mark -a to drop a mark at CWD, mark -l to list, mark (no args) to pick and jump. Trail is per-terminal session and clears on shell exit. Source bashd-init.sh for cd support." ;;
   byext) echo "Move loose files in CWD into subdirs by extension: file.pdf -> pdf/file.pdf; files with no extension go into noext/." ;;
   bydate) echo "Move loose files in CWD into date subdirs by mtime. Default: YYYY/MM/DD. -M for YYYY/MM only. bydate [-M]." ;;
   dedupe) echo "Find duplicate files by content hash (sha256sum/shasum -a 256); keep first in place, move rest to _dupes/ with disambiguated names. -r = recurse into subdirs. Regular files only." ;;
@@ -149,6 +152,9 @@ item "rmsfx" "Strip suffix at delim; -n N [delim]"
 item "recase" "-c camel -l lower -u upper -t title -k kebab"
 item "gaps" "Re-index numbered files to fill gaps"
 item "undo" "Reverse last rename (single-level)"
+item "lower" "Sanitize filenames: lowercase + strip junk"
+item "split" "Split loose files into N equal subdirs"
+item "mark" "Session breadcrumb trail: -a mark, -l list"
 item "byext" "Move files into ext/ dirs (noext if no ext)"
 item "bydate" "Move files into YYYY/MM/DD dirs; -M month"
 item "dedupe" "Duplicates by hash -> _dupes/; -r recurse"

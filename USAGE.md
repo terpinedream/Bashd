@@ -14,17 +14,19 @@ For quick reference, run `bashd` to see the ASCII chart, or `bashd --<command>` 
   - [nest](#nest), [flatten](#flatten)
   - [stick](#stick), [pull](#pull), [bring](#bring)
   - [byext](#byext), [bydate](#bydate), [dedupe](#dedupe)
+  - [split](#split)
 - [Renaming](#renaming)
   - [namechange](#namechange)
   - [prefix](#prefix), [suffix](#suffix)
   - [rmpfx](#rmpfx), [rmsfx](#rmsfx)
   - [recase](#recase), [gaps](#gaps)
+  - [lower](#lower)
   - [undo](#undo)
 - [Cleanup](#cleanup)
   - [trim](#trim), [empt](#empt), [cleanme](#cleanme)
 - [Navigation](#navigation)
   - [hop](#hop), [ld](#ld), [ndir](#ndir), [cdch](#cdch)
-  - [tmpws](#tmpws), [qs](#qs), [bm](#bm)
+  - [tmpws](#tmpws), [qs](#qs), [bm](#bm), [mark](#mark)
 - [Clipboard](#clipboard)
   - [clip](#clip), [cpath](#cpath)
 - [File Transfer & Backup](#file-transfer--backup)
@@ -299,6 +301,37 @@ Keeps the first occurrence in place. Duplicates are moved to `_dupes/` with disa
 
 ---
 
+### split
+
+Split loose files in CWD into N roughly equal subdirectories.
+
+```
+split <N>             N must be at least 2
+```
+
+Distributes files round-robin into `part_1/`, `part_2/`, ... `part_N/`. Refuses to run if `part_*` dirs already exist.
+
+**Example:**
+
+```
+$ ls
+a.txt  b.txt  c.txt  d.txt  e.txt  f.txt  g.txt
+$ split 3
+✓ Split 7 file(s) into 3 parts (~2 each, 1 part(s) have 3)
+$ ls
+part_1/  part_2/  part_3/
+$ ls part_1/
+a.txt  d.txt  g.txt
+$ ls part_2/
+b.txt  e.txt
+$ ls part_3/
+c.txt  f.txt
+```
+
+Useful for batching large directories (e.g., uploading 500 photos in chunks).
+
+---
+
 ## Renaming
 
 All rename scripts support **undo** -- see [undo](#undo) below.
@@ -496,9 +529,36 @@ $ ls
 
 ---
 
+### lower
+
+Sanitize filenames: lowercase everything, replace spaces and special characters with underscores, and collapse consecutive underscores. Designed for cleaning up files from Windows, downloads, or the web.
+
+```
+lower                 No arguments; operates on loose files in CWD
+```
+
+Characters replaced with `_`: spaces, parentheses, brackets, braces, commas, apostrophes, ampersands, `+`, `@`, `!`, `#`, `$`, `%`, `^`, `=`, `~`, backticks.
+
+Extensions are always lowercased. Supports undo.
+
+**Example:**
+
+```
+$ ls
+My File (Copy) [2].jpg  Song - Remix & Final.MP3  Photo_2026.PNG
+$ lower
+✓ Sanitized 3 file(s)
+$ ls
+my_file_copy_2.jpg  photo_2026.png  song_remix_final.mp3
+```
+
+Files that are already clean are skipped.
+
+---
+
 ### undo
 
-Reverse the last rename operation. Works with `prefix`, `suffix`, `rmpfx`, `rmsfx`, `recase`, `namechange`, and `gaps`.
+Reverse the last rename operation. Works with `prefix`, `suffix`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`, and `lower`.
 
 ```
 undo                  No arguments; must be in the same directory
@@ -708,6 +768,43 @@ Bookmarks persist in `~/.config/bashd/bookmarks`.
 
 ---
 
+### mark
+
+Session breadcrumb trail -- drop marks as you navigate and jump back to any of them. Unlike `bm` (permanent bookmarks) or `ld` (single last-dir), this is a stack that lives only for the current terminal session.
+
+```
+mark -a               Drop a mark at CWD
+mark -l               List all marks in this session
+mark                  Show numbered list and pick one to jump to
+```
+
+The trail is stored in a temp file tied to your shell's PID and automatically cleaned up when the terminal exits. Requires `bashd-init.sh`.
+
+**Example:**
+
+```
+$ cd ~/projects/app
+$ mark -a
+✓ Marked: /home/user/projects/app
+
+$ cd /etc/nginx
+$ mark -a
+✓ Marked: /home/user/projects/app
+
+$ cd /tmp
+$ mark
+Breadcrumb trail (0 = cancel):
+  [1] /home/user/projects/app
+  [2] /etc/nginx
+
+Jump to: 1
+~/projects/app $
+```
+
+Duplicate consecutive marks are ignored (marking the same directory twice in a row won't add a second entry).
+
+---
+
 ## Clipboard
 
 ### clip
@@ -876,6 +973,20 @@ prefix -d -i → undo
 ```
 # Delete some files, then:
 gaps                      Fill the numbering holes
+```
+
+**Sanitize messy downloads:**
+
+```
+lower                     Clean up all filenames in one shot
+lower → undo              Revert if something looks wrong
+```
+
+**Batch process a huge folder:**
+
+```
+split 4                   Divide into part_1/ ... part_4/
+# process each part independently
 ```
 
 **Clipboard workflow:**
