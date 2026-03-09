@@ -1,9 +1,9 @@
 #!/bin/bash
 # Add suffix to loose filenames in CWD (before extension): -d date, -p parent dir name, -i index.
-# suffix [-d] [-p] [-i]  Flags combinable. Only regular files, direct children. Complements prefix.
+# sfx [-d] [-p] [-i]  Flags combinable. Only regular files, direct children. Complements pfx.
 
 usage() {
-  echo "Usage: suffix [-d] [-p] [-i]" >&2
+  echo "Usage: sfx [-d] [-p] [-i]" >&2
   echo "  -d  Append date before extension (base_YYYY_MM_DD.ext)" >&2
   echo "  -p  Append parent directory name before extension" >&2
   echo "  -i  Append incremental index before extension (base_001.ext)" >&2
@@ -39,13 +39,13 @@ for item in ./* ./.[!.]* ..?*; do
   [[ "$name" == "." || "$name" == ".." ]] && continue
   files+=("$item")
 done
-[[ ${#files[@]} -eq 0 ]] && { echo "No files to suffix"; exit 0; }
+[[ ${#files[@]} -eq 0 ]] && { echo "No files to sfx"; exit 0; }
 
 IFS=$'\n' read -r -d '' -a sorted < <(printf '%s\n' "${files[@]}" | sort) || true
 [[ ${#sorted[@]} -eq 0 ]] && sorted=("${files[@]}")
 
-tmp_suffix=".suffix.$$"
-bashd_log_start "suffix"
+tmp_suffix=".sfx.$$"
+bashd_log_start "sfx"
 i=1
 for f in "${sorted[@]}"; do
   [[ -e "$f" ]] || continue
@@ -74,4 +74,4 @@ for item in *"${tmp_suffix}"; do
   final="${item%${tmp_suffix}}"
   mv -- "$item" "$final" || { echo "✗ Failed to finalize $item" >&2; exit 1; }
 done
-echo "✓ Suffixed ${#files[@]} file(s)"
+echo "✓ Sfx'd ${#files[@]} file(s)"

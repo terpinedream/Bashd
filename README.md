@@ -16,10 +16,9 @@
 | Script       | Description |
 |--------------|-------------|
 | **cleanme**  | Clear caches: no flag = system + pacman; `-p` pacman only (root); `-s` system only (~/.cache, Trash) |
-| **cram**     | Move loose files into a folder: no arg = into the single subdir; `cram /path` = into `/path` |
+| **wrap**     | Move loose files into a dir: `wrap` = into single subdir; `wrap <dir>` = into that dir; `wrap -c <name>` = create dir and move files; `wrap -c -a <name>` = create dir and move files + dirs |
 | **crush**    | Move CWD contents into parent and remove empty CWD; source `bashd-init.sh` so running `crush` also cds to parent (default) |
-| **fold**     | Create a new directory and move loose items into it: `fold dirname` (files only); `fold -a dirname` or `fold --all dirname` (files and dirs) |
-| **ufold**    | Unpack directories in CWD: `ufold` unpacks all; `ufold path` unpacks that dir (if in CWD: move; if outside CWD: copy to CWD) |
+| **uwrap**    | Unpack directories in CWD: `uwrap` unpacks all; `uwrap path` unpacks that dir (if in CWD: move; if outside CWD: copy to CWD) |
 | **namechange** | Mass rename: `namechange "file.txt"` → 1_file.txt, 2_file.txt, … (underscore separator; works with nest) |
 | **pull**     | Move one file/dir to parent: `pull <file>` |
 | **bring**    | Copy a file or directory into CWD: `bring <path>`. Complements pull |
@@ -34,29 +33,36 @@
 | **qs**       | Quick navigation: `qs` = pick from common dirs and drill down; `qs -s PATTERN` = fuzzy search dirs; `qs -f PATTERN` = search and open file in `$EDITOR`. Source `bashd-init.sh` so `qs` (and `qs -s`) cd into the chosen directory |
 | **bm**       | Directory bookmarks: `bm -a [dir] <name>` to save (CWD if dir omitted); `bm <name>` to jump; `bm -l` to list; `bm -d <name>` to delete. Names can be numbers or strings. Source `bashd-init.sh` so `bm` cds |
 | **clip**     | Copy a file's contents to clipboard: `clip <filename>` (uses wl-copy/xclip/xsel/pbcopy/clip.exe fallback) |
+| **clipd**    | Copy multiple files to clipboard with `# /path/to/file` separators: `clipd file1 file2 ...` |
+| **cbwrite**  | Write clipboard contents to a file (inverse of clip): `cbwrite <filename>`; `-f` overwrite, `-a` append |
 | **cpath**    | Copy a path to clipboard: `cpath` = CWD; `cpath <file_or_dir>` = that path (absolute) |
-| **trim**     | Remove empty dirs, zero-byte files, `.DS_Store`, `Thumbs.db`. Prints list and asks for confirmation before deleting. `-r` recursive |
-| **empt**     | List what trim would remove (dry run): zero-byte files, .DS_Store, Thumbs.db, empty dirs. `-r` recursive. No deletion |
-| **prefix**   | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
-| **suffix**   | Add suffix before extension: `-d` date, `-p` parent dir name, `-i` index (e.g. base_001.ext). Complements prefix |
-| **rmpfx**    | Remove prefix segments at delimiter: `prefix_rest.ext` → `rest.ext`. `rmpfx [-n N] [delim]`; `-n N` strips N segments (default 1), delim default `_`. Reverses prefix/nest naming |
-| **rmsfx**    | Remove suffix segments at delimiter (before extension): `base_suffix.ext` → `base.ext`. `rmsfx [-n N] [delim]`; `-n N` strips N segments (default 1), delim default `_`. Reverses suffix naming |
+| **cpt**      | Copy last command output to clipboard. Shows the command, confirms, re-runs with output captured. `-y` to skip confirmation |
+| **sized**    | Show largest files/dirs in CWD, ranked by size: `sized` top 10 files; `-d` dirs; `-r` recursive; `-n N` top N |
+| **trim**     | Remove empty dirs, zero-byte files, `.DS_Store`, `Thumbs.db`. Prints list and asks for confirmation before deleting. `-r` recursive, `-n` dry run |
+| **qc**       | Quick interactive file deletion: `qc` lists all items, `qc <pattern>` filters by substring. Pick numbers to delete, confirms before removal |
+| **pfx**      | Add to loose filenames in CWD: `-d` prepend date (YYYY_MM_DD), `-p` append parent dir name, `-i` append index (001, 002, …). Flags combinable |
+| **sfx**      | Add suffix before extension: `-d` date, `-p` parent dir name, `-i` index (e.g. base_001.ext). Complements pfx |
+| **rmpfx**    | Remove prefix segments at delimiter: `pfx_rest.ext` → `rest.ext`. `rmpfx [-d] [-n N] [delim]`; `-d` strips date prefix (YYYY_MM_DD); `-n N` strips N segments (default 1); delim default `_` |
+| **rmsfx**    | Remove suffix segments at delimiter (before extension): `base_sfx.ext` → `base.ext`. `rmsfx [-d] [-n N] [delim]`; `-d` strips date suffix (YYYY_MM_DD); `-n N` strips N segments (default 1); delim default `_` |
 | **recase**   | Batch rename to target case: `-c` camelCase, `-l` lowercase, `-u` UPPERCASE, `-t` Title_Case, `-k` kebab-case. Splits words on `_` `-` space and camelCase boundaries. Extensions stay lowercase |
 | **gaps**     | Re-index numbered files to fill gaps (e.g. `hello_01, hello_03, hello_05` → `hello_01, hello_02, hello_03`). Detects numeric segment at first or last delimiter boundary. `gaps [delim]`; default `_`. Preserves padding width |
-| **undo**     | Reverse the last rename operation (`prefix`, `suffix`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`, `lower`). Must be run from the same directory. Single-level undo |
+| **undo**     | Reverse the last rename operation (`pfx`, `sfx`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`, `lower`). Must be run from the same directory. Single-level undo |
 | **lower**    | Sanitize filenames: lowercase, spaces/special chars to underscores, collapse runs. `My File (Copy) [2].jpg` → `my_file_copy_2.jpg`. Supports undo |
 | **split**    | Split loose files into N roughly equal subdirectories: `split 3` creates `part_1/`, `part_2/`, `part_3/` and distributes round-robin |
 | **mark**     | Session breadcrumb trail: `mark -a` to drop a mark at CWD, `mark -l` to list, `mark` to pick and jump. Per-terminal session, clears on shell exit. Source `bashd-init.sh` |
 | **byext**    | Move loose files into subdirs by extension: `file.pdf` → `pdf/file.pdf`; no extension → `noext/` |
 | **bydate**   | Move loose files into date dirs by mtime: default `YYYY/MM/DD`; `-M` for `YYYY/MM` only |
 | **dedupe**   | Find duplicate files by content hash; keep first, move rest to `_dupes/`. `-r` to recurse into subdirs |
+| **template** | Snapshot and recreate directory structures: `template save <name>`, `template <name>`, `-l` list, `-d` delete. Stored in `~/.config/bashd/templates/` |
+| **pland**    | Create incremental plan markdown files: `pland` creates `PLAN/PLAN_NN.md` with LLM-friendly template sections; `-e` to open in `$EDITOR` |
 
 ## [FILE TRANSFER]
 
 | Script      | Description |
 |-------------|-------------|
 | **archive** | Archive to remote/HDD (options: -w work, -i image, -v video, -k keys, -c crypt, -p path) |
-| **bak**     | Single-file backup: `bak <file>` renames the file to <name>.<ext>.bak and creates a copy as the original (backup + working copy) |
+| **bak**     | Backup files: `bak <file> [file2] ...` or `bak *` for all. Renames to `.bak` and keeps working copies |
+| **ubak**    | Restore/clean `.bak` files: if identical, removes `.bak`; if different, `-k` keeps original, `-r` reverts to backup. `ubak` (all) or `ubak <file.bak>` (one) |
 | **bkup**    | Backup CWD to a directory: `bkup setup <path>` to set default; then `bkup` or `bkup -f`; or `bkup [-f] <path>`; `-f` overwrites if destination not empty |
 | **pullfrom** | Pull from remote: `pullfrom <remote_path> <local_path>` |
 | **pushto**  | Push to remote: `pushto <local_path> <remote_path>` |

@@ -1,16 +1,18 @@
 #!/bin/bash
 # Safely remove junk and empty structure: zero-byte files, .DS_Store, Thumbs.db, empty dirs.
-# trim [-r]  -r recursive. Always prints list and prompts for confirmation before deleting.
+# trim [-r] [-n]  -r recursive, -n dry run (list only, no deletion).
 
 RECURSE=false
-while getopts "r" opt; do
+DRY_RUN=false
+while getopts "rn" opt; do
     case $opt in
         r) RECURSE=true ;;
-        *) echo "Usage: trim [-r]" >&2; echo "  -r  Recursive (descend into subdirs)" >&2; exit 1 ;;
+        n) DRY_RUN=true ;;
+        *) echo "Usage: trim [-r] [-n]" >&2; echo "  -r  Recursive (descend into subdirs)" >&2; echo "  -n  Dry run (list what would be removed)" >&2; exit 1 ;;
     esac
 done
 shift $((OPTIND-1))
-[[ $# -gt 0 ]] && { echo "Usage: trim [-r]" >&2; exit 1; }
+[[ $# -gt 0 ]] && { echo "Usage: trim [-r] [-n]" >&2; exit 1; }
 
 to_remove=()
 if [[ "$RECURSE" == true ]]; then
@@ -44,6 +46,14 @@ else
 fi
 
 [[ ${#to_remove[@]} -eq 0 ]] && { echo "✓ Nothing to trim"; exit 0; }
+
+if $DRY_RUN; then
+    echo "Would trim ${#to_remove[@]} item(s):"
+    for i in "${!to_remove[@]}"; do
+        printf "  %d. %s\n" "$((i+1))" "${to_remove[$i]}"
+    done
+    exit 0
+fi
 
 echo "The following will be removed:"
 for i in "${!to_remove[@]}"; do

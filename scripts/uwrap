@@ -1,7 +1,7 @@
 #!/bin/bash
 # Unpack directories in CWD: move their contents up into CWD and remove the empty dirs.
-# ufold                    -> unpack all directories in CWD
-# ufold path/to/dir        -> unpack only that directory (if in CWD: move; if outside CWD: copy to CWD)
+# uwrap                    -> unpack all directories in CWD
+# uwrap path/to/dir        -> unpack only that directory (if in CWD: move; if outside CWD: copy to CWD)
 
 cwd=$(pwd)
 cwd_real=$(realpath "$cwd" 2>/dev/null || echo "$cwd")

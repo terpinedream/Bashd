@@ -1,0 +1,112 @@
+#!/bin/bash
+# Restore .bak files to their original names (reverse of bak).
+# If the original exists and is identical to the .bak, the .bak is removed.
+# If the original exists and differs:
+#   -k (or -f)  Keep the current original, discard the .bak
+#   -r          Revert: replace the original with the .bak
+#   (no flag)   Error prompting for -k or -r
+# ubak [-k|-r|-f] [file.bak]
+
+usage() {
+  echo "Usage: ubak [-k|-r|-f] [file.bak]" >&2
+  echo "  No args: process all .bak files in CWD" >&2
+  echo "  ubak <file.bak>: process a single file" >&2
+  echo "" >&2
+  echo "  When original and .bak differ:" >&2
+  echo "  -k  Keep original, discard .bak" >&2
+  echo "  -r  Revert: replace original with .bak" >&2
+  echo "  -f  Alias for -k (backward compatible)" >&2
+  exit 1
+}
+
+MODE=""
+while getopts "krfh" opt; do
+  case $opt in
+    k|f) MODE="keep" ;;
+    r) MODE="revert" ;;
+    h) usage ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND-1))
+
+[[ $# -gt 1 ]] && usage
+
+files_match() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    local h1 h2
+    h1=$(sha256sum -- "$1" | cut -d' ' -f1)
+    h2=$(sha256sum -- "$2" | cut -d' ' -f1)
+    [[ "$h1" == "$h2" ]]
+  elif command -v shasum >/dev/null 2>&1; then
+    local h1 h2
+    h1=$(shasum -a 256 -- "$1" | cut -d' ' -f1)
+    h2=$(shasum -a 256 -- "$2" | cut -d' ' -f1)
+    [[ "$h1" == "$h2" ]]
+  else
+    cmp -s -- "$1" "$2"
+  fi
+}
+
+restore_one() {
+  local bakfile="$1"
+  [[ ! -f "$bakfile" ]] && { echo "✗ Not a file or not found: $bakfile" >&2; return 1; }
+  [[ "$bakfile" != *.bak ]] && { echo "✗ Not a .bak file: $bakfile" >&2; return 1; }
+
+  local original="${bakfile%.bak}"
+  local bname oname
+  bname=$(basename "$bakfile")
+  oname=$(basename "$original")
+
+  if [[ ! -e "$original" ]]; then
+    mv -- "$bakfile" "$original" || { echo "✗ Failed to restore $bname" >&2; return 1; }
+    echo "✓ Restored: $bname → $oname"
+    return 0
+  fi
+
+  if files_match "$original" "$bakfile"; then
+    rm -- "$bakfile" || { echo "✗ Failed to remove $bname" >&2; return 1; }
+    echo "✓ Removed: $bname (identical to $oname)"
+    return 0
+  fi
+
+  case "$MODE" in
+    keep)
+      rm -- "$bakfile" || { echo "✗ Failed to remove $bname" >&2; return 1; }
+      echo "✓ Kept $oname, removed $bname"
+      ;;
+    revert)
+      mv -- "$bakfile" "$original" || { echo "✗ Failed to revert $bname" >&2; return 1; }
+      echo "✓ Reverted: $oname replaced with $bname"
+      ;;
+    *)
+      echo "✗ $oname differs from $bname (use -k to keep original or -r to revert to backup)" >&2
+      return 1
+      ;;
+  esac
+}
+
+if [[ $# -eq 1 ]]; then
+  restore_one "$1"
+else
+  baks=()
+  for f in *.bak; do
+    [[ -f "$f" ]] || continue
+    baks+=("$f")
+  done
+  [[ ${#baks[@]} -eq 0 ]] && { echo "No .bak files in CWD"; exit 0; }
+
+  processed=0
+  failed=0
+  for f in "${baks[@]}"; do
+    if restore_one "$f"; then
+      ((processed++))
+    else
+      ((failed++))
+    fi
+  done
+  echo ""
+  msg="✓ Processed $processed file(s)"
+  [[ $failed -gt 0 ]] && msg+=", $failed skipped (use -k to keep or -r to revert)"
+  echo "$msg"
+fi

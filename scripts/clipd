@@ -1,0 +1,45 @@
+#!/bin/bash
+# Copy multiple files to clipboard with comment-style separators showing each file's path.
+# clipd <file1> [file2] ...
+
+usage() {
+  echo "Usage: clipd <file1> [file2] ..." >&2
+  echo "  Concatenates files with # /path/to/file headers and copies to clipboard" >&2
+  exit 1
+}
+
+[[ $# -eq 0 ]] && usage
+[[ "$1" == "-h" || "$1" == "--help" ]] && usage
+
+for f in "$@"; do
+  [[ ! -e "$f" ]] && { echo "✗ No such file: $f" >&2; exit 1; }
+  [[ ! -f "$f" ]] && { echo "✗ Not a regular file: $f" >&2; exit 1; }
+  [[ ! -r "$f" ]] && { echo "✗ File is not readable: $f" >&2; exit 1; }
+done
+
+output=""
+for f in "$@"; do
+  abspath=$(readlink -f "$f" 2>/dev/null || realpath "$f" 2>/dev/null || echo "$f")
+  [[ -n "$output" ]] && output+=$'\n'
+  output+="# ${abspath}"$'\n'
+  output+=$(cat -- "$f")
+  output+=$'\n'
+done
+
+if command -v wl-copy >/dev/null 2>&1; then
+  printf '%s' "$output" | wl-copy
+elif command -v xclip >/dev/null 2>&1; then
+  printf '%s' "$output" | xclip -selection clipboard
+elif command -v xsel >/dev/null 2>&1; then
+  printf '%s' "$output" | xsel --clipboard --input
+elif command -v pbcopy >/dev/null 2>&1; then
+  printf '%s' "$output" | pbcopy
+elif command -v clip.exe >/dev/null 2>&1; then
+  printf '%s' "$output" | clip.exe
+else
+  echo "✗ No clipboard tool found (tried: wl-copy, xclip, xsel, pbcopy, clip.exe)" >&2
+  echo "  Install one (e.g. wl-clipboard or xclip) and try again." >&2
+  exit 1
+fi
+
+echo "✓ Copied $# file(s) to clipboard"

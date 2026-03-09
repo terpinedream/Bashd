@@ -1,0 +1,89 @@
+#!/bin/bash
+# Snapshot and recreate directory structures as named templates.
+# template save <name>   Save CWD structure (dirs + empty placeholder files)
+# template <name>        Recreate saved template in CWD
+# template -l            List saved templates
+# template -d <name>     Delete a template
+
+TEMPLATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/bashd/templates"
+
+usage() {
+    echo "Usage: template save <name>  |  template <name>  |  template -l  |  template -d <name>" >&2
+    echo "  save <name>   Snapshot CWD structure as a named template" >&2
+    echo "  <name>        Recreate template in CWD" >&2
+    echo "  -l            List saved templates" >&2
+    echo "  -d <name>     Delete a template" >&2
+    exit 1
+}
+
+[[ $# -eq 0 ]] && usage
+
+case "$1" in
+    -l|--list)
+        mkdir -p "$TEMPLATE_DIR"
+        shopt -s nullglob
+        tars=("$TEMPLATE_DIR"/*.tar)
+        shopt -u nullglob
+        if [[ ${#tars[@]} -eq 0 ]]; then
+            echo "No saved templates."
+            exit 0
+        fi
+        echo "Saved templates:"
+        for t in "${tars[@]}"; do
+            name=$(basename "$t" .tar)
+            count=$(tar tf "$t" 2>/dev/null | wc -l)
+            echo "  $name  ($count entries)"
+        done
+        ;;
+    -d|--delete)
+        [[ -z "${2:-}" ]] && { echo "✗ Missing template name" >&2; usage; }
+        name="$2"
+        target="$TEMPLATE_DIR/${name}.tar"
+        [[ ! -f "$target" ]] && { echo "✗ No template named '$name'" >&2; exit 1; }
+        rm -f "$target"
+        echo "✓ Deleted template '$name'"
+        ;;
+    save)
+        [[ -z "${2:-}" ]] && { echo "✗ Missing template name" >&2; usage; }
+        name="$2"
+        mkdir -p "$TEMPLATE_DIR"
+        target="$TEMPLATE_DIR/${name}.tar"
+        if [[ -f "$target" ]]; then
+            read -r -p "Template '$name' already exists. Overwrite? [y/N] " ans
+            [[ "$ans" =~ ^[yY] ]] || { echo "Aborted."; exit 0; }
+        fi
+
+        tmpdir=$(mktemp -d)
+        trap 'rm -rf "$tmpdir"' EXIT
+
+        while IFS= read -r -d '' d; do
+            mkdir -p "$tmpdir/$d"
+        done < <(find . -type d -not -path . -print0 2>/dev/null)
+
+        while IFS= read -r -d '' f; do
+            mkdir -p "$tmpdir/$(dirname "$f")"
+            touch "$tmpdir/$f"
+        done < <(find . -type f -print0 2>/dev/null)
+
+        tar cf "$target" -C "$tmpdir" . 2>/dev/null
+        dirs=$(find . -type d -not -path . 2>/dev/null | wc -l)
+        files=$(find . -type f 2>/dev/null | wc -l)
+        echo "✓ Saved template '$name' ($dirs dir(s), $files file(s))"
+        ;;
+    -h|--help)
+        usage
+        ;;
+    -*)
+        echo "✗ Unknown option: $1" >&2
+        usage
+        ;;
+    *)
+        name="$1"
+        target="$TEMPLATE_DIR/${name}.tar"
+        [[ ! -f "$target" ]] && { echo "✗ No template named '$name'" >&2; exit 1; }
+        tar xf "$target" -C . 2>/dev/null
+        dirs=$(tar tf "$target" 2>/dev/null | grep -c '/$' || true)
+        files=$(tar tf "$target" 2>/dev/null | grep -vc '/$' || true)
+        echo "✓ Created structure from template '$name' ($dirs dir(s), $files file(s))"
+        ;;
+esac

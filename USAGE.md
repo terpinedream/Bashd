@@ -10,29 +10,33 @@ For quick reference, run `bashd` to see the ASCII chart, or `bashd --<command>` 
 
 - [Setup](#setup)
 - [File Organization](#file-organization)
-  - [cram](#cram), [fold](#fold), [ufold](#ufold), [crush](#crush)
+  - [wrap](#wrap), [uwrap](#uwrap), [crush](#crush)
   - [nest](#nest), [flatten](#flatten)
   - [stick](#stick), [pull](#pull), [bring](#bring)
   - [byext](#byext), [bydate](#bydate), [dedupe](#dedupe)
   - [split](#split)
 - [Renaming](#renaming)
   - [namechange](#namechange)
-  - [prefix](#prefix), [suffix](#suffix)
+  - [pfx](#pfx), [sfx](#sfx)
   - [rmpfx](#rmpfx), [rmsfx](#rmsfx)
   - [recase](#recase), [gaps](#gaps)
   - [lower](#lower)
   - [undo](#undo)
 - [Cleanup](#cleanup)
-  - [trim](#trim), [empt](#empt), [cleanme](#cleanme)
+  - [trim](#trim), [qc](#qc), [cleanme](#cleanme)
 - [Navigation](#navigation)
   - [hop](#hop), [ld](#ld), [ndir](#ndir), [cdch](#cdch)
   - [tmpws](#tmpws), [qs](#qs), [bm](#bm), [mark](#mark)
 - [Clipboard](#clipboard)
-  - [clip](#clip), [cpath](#cpath)
+  - [clip](#clip), [clipd](#clipd), [cbwrite](#cbwrite), [cpath](#cpath), [cpt](#cpt)
+- [Inspection](#inspection)
+  - [sized](#sized)
 - [File Transfer & Backup](#file-transfer--backup)
-  - [bak](#bak), [bkup](#bkup)
+  - [bak](#bak), [ubak](#ubak), [bkup](#bkup)
   - [archive](#archive), [pullfrom](#pullfrom), [pushto](#pushto)
   - [dotsync](#dotsync)
+- [Scaffolding](#scaffolding)
+  - [template](#template), [pland](#pland)
 - [System](#system)
   - [topd](#topd), [paclock](#paclock)
 
@@ -42,7 +46,7 @@ For quick reference, run `bashd` to see the ASCII chart, or `bashd --<command>` 
 
 Most scripts work standalone. Just copy or symlink them to a directory on your `PATH` (e.g. `/usr/local/bin`).
 
-Scripts that change your shell's working directory (`crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, `bm`) require sourcing the init file in your `~/.bashrc` or `~/.zshrc`:
+Scripts that change your shell's working directory (`crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, `bm`, `mark`) require sourcing the init file in your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 source /path/to/Bashd/scripts/bashd-init.sh
@@ -54,57 +58,50 @@ If you symlink scripts to `/usr/bin`, make sure `_bashd_log` is also symlinked t
 
 ## File Organization
 
-### cram
+### wrap
 
-Move loose files into a directory.
+Move loose files into a directory. Combines the functionality of the former `fold` and `cram`.
 
 ```
-cram                  Move loose files into the single subdir in CWD
-cram /path/to/dir     Move loose files into the specified directory
+wrap                        Move loose files into the single subdir in CWD
+wrap <dir>                  Move loose files into the specified directory
+wrap -c <name>              Create new dir, move files into it
+wrap -c -a <name>           Create new dir, move files AND directories into it
 ```
 
-**Example:** You have a folder with `photos/` and a dozen stray `.jpg` files. Run `cram` and they all go into `photos/`.
+**Example -- into existing subdir (no args):**
 
 ```
 $ ls
 photos/  IMG_001.jpg  IMG_002.jpg  IMG_003.jpg
-$ cram
-✓ Moved loose files into photos/
+$ wrap
+✓ Moved 3 loose file(s) into photos/
 ```
 
-If CWD has multiple subdirectories, you must specify which one: `cram photos`.
+If CWD has multiple subdirectories, specify which one: `wrap photos`.
 
----
-
-### fold
-
-Create a new directory and move loose items into it.
-
-```
-fold <dirname>        Create dir, move only files into it
-fold -a <dirname>     Create dir, move files and directories into it
-```
-
-**Example:** Wrap everything in CWD into a new folder.
+**Example -- create a new directory:**
 
 ```
 $ ls
 report.pdf  notes.txt  data.csv
-$ fold project
+$ wrap -c project
 ✓ Created project/ and moved 3 item(s) into it
 $ ls
 project/
 ```
 
+Use `-c -a` to also move subdirectories (not just files).
+
 ---
 
-### ufold
+### uwrap
 
-Unpack directories -- the reverse of fold.
+Unpack directories -- the reverse of wrap.
 
 ```
-ufold                 Unpack all subdirectories into CWD
-ufold <path>          Unpack one directory (move if in CWD, copy if outside)
+uwrap                 Unpack all subdirectories into CWD
+uwrap <path>          Unpack one directory (move if in CWD, copy if outside)
 ```
 
 **Example:**
@@ -112,7 +109,7 @@ ufold <path>          Unpack one directory (move if in CWD, copy if outside)
 ```
 $ ls
 project/
-$ ufold
+$ uwrap
 $ ls
 report.pdf  notes.txt  data.csv
 ```
@@ -359,15 +356,15 @@ The underscore separator is intentional -- these files work directly with `nest`
 
 ---
 
-### prefix
+### pfx
 
 Add prefixes to filenames. Flags are combinable.
 
 ```
-prefix -d             Prepend date (YYYY_MM_DD_filename.ext)
-prefix -p             Append parent directory name
-prefix -i             Append incremental index (001, 002, ...)
-prefix -d -i          Combine: date prefix + index suffix
+pfx -d                Prepend date (YYYY_MM_DD_filename.ext)
+pfx -p                Append parent directory name
+pfx -i                Append incremental index (001, 002, ...)
+pfx -d -i             Combine: date prefix + index suffix
 ```
 
 **Example:**
@@ -375,7 +372,7 @@ prefix -d -i          Combine: date prefix + index suffix
 ```
 $ ls
 photo.jpg  report.pdf
-$ prefix -d -i
+$ pfx -d -i
 ✓ Prefixed 2 file(s)
 $ ls
 2026_03_04_photo_001.jpg  2026_03_04_report_002.pdf
@@ -383,14 +380,14 @@ $ ls
 
 ---
 
-### suffix
+### sfx
 
-Add suffixes before the file extension. Same flags as prefix.
+Add suffixes before the file extension. Same flags as pfx.
 
 ```
-suffix -d             Append date (filename_YYYY_MM_DD.ext)
-suffix -p             Append parent directory name
-suffix -i             Append index (filename_001.ext)
+sfx -d                Append date (filename_YYYY_MM_DD.ext)
+sfx -p                Append parent directory name
+sfx -i                Append index (filename_001.ext)
 ```
 
 **Example:**
@@ -398,8 +395,8 @@ suffix -i             Append index (filename_001.ext)
 ```
 $ ls
 photo.jpg  report.pdf
-$ suffix -i
-✓ Suffixed 2 file(s)
+$ sfx -i
+✓ Sfx'd 2 file(s)
 $ ls
 photo_001.jpg  report_002.pdf
 ```
@@ -408,29 +405,38 @@ photo_001.jpg  report_002.pdf
 
 ### rmpfx
 
-Remove prefix segments from filenames at a delimiter. Reverses `prefix` and works well after `flatten`.
+Remove prefix segments from filenames at a delimiter. Reverses `pfx` and works well after `flatten`.
 
 ```
 rmpfx                 Strip 1 prefix segment (default _ delimiter)
+rmpfx -d              Strip date prefix (YYYY_MM_DD, 3 segments)
 rmpfx -n N            Strip N prefix segments
 rmpfx <delim>         Custom delimiter
 rmpfx -n 3 "-"        Strip 3 segments at - delimiter
 ```
 
-**Example:**
+`-d` and `-n` are mutually exclusive. With `-d`, files whose prefix doesn't look like a date are skipped automatically.
+
+**Example -- strip a date prefix in one shot:**
 
 ```
 $ ls
-2026_03_04_photo.jpg  2026_03_04_report.pdf  notes.txt
-$ rmpfx
-✓ Stripped prefix from 2 file(s)
-$ ls
-03_04_photo.jpg  03_04_report.pdf  notes.txt
-
-$ rmpfx -n 2
+2026_03_09_photo.jpg  2026_03_09_report.pdf  notes.txt
+$ rmpfx -d
 ✓ Stripped prefix from 2 file(s)
 $ ls
 photo.jpg  report.pdf  notes.txt
+```
+
+**Example -- strip N segments manually:**
+
+```
+$ ls
+a_b_c_file.txt
+$ rmpfx -n 2
+✓ Stripped prefix from 1 file(s)
+$ ls
+c_file.txt
 ```
 
 Files without enough delimiter segments are skipped.
@@ -439,15 +445,29 @@ Files without enough delimiter segments are skipped.
 
 ### rmsfx
 
-Remove suffix segments from filenames at a delimiter (before the extension). Reverses `suffix`.
+Remove suffix segments from filenames at a delimiter (before the extension). Reverses `sfx`.
 
 ```
 rmsfx                 Strip 1 suffix segment (default _ delimiter)
+rmsfx -d              Strip date suffix (YYYY_MM_DD, 3 segments)
 rmsfx -n N            Strip N suffix segments
 rmsfx <delim>         Custom delimiter
 ```
 
-**Example:**
+`-d` and `-n` are mutually exclusive. With `-d`, files whose suffix doesn't look like a date are skipped.
+
+**Example -- strip a date suffix:**
+
+```
+$ ls
+photo_2026_03_09.jpg  report_2026_03_09.pdf  notes.txt
+$ rmsfx -d
+✓ Stripped suffix from 2 file(s)
+$ ls
+photo.jpg  report.pdf  notes.txt
+```
+
+**Example -- strip N segments manually:**
 
 ```
 $ ls
@@ -558,7 +578,7 @@ Files that are already clean are skipped.
 
 ### undo
 
-Reverse the last rename operation. Works with `prefix`, `suffix`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`, and `lower`.
+Reverse the last rename operation. Works with `pfx`, `sfx`, `rmpfx`, `rmsfx`, `recase`, `namechange`, `gaps`, and `lower`.
 
 ```
 undo                  No arguments; must be in the same directory
@@ -595,19 +615,42 @@ Safely remove junk files and empty directories.
 ```
 trim                  Direct children only
 trim -r               Recursive
+trim -n               Dry run (list what would be removed, no deletion)
+trim -r -n            Recursive dry run
 ```
 
-Targets: zero-byte files, `.DS_Store`, `Thumbs.db`, empty directories. Always prints a list and asks for confirmation before deleting.
+Targets: zero-byte files, `.DS_Store`, `Thumbs.db`, empty directories. Without `-n`, prints a list and asks for confirmation before deleting.
 
 ---
 
-### empt
+### qc
 
-Dry run for `trim` -- shows what would be removed without deleting anything.
+Quick interactive file and directory deletion. Lists items in CWD, lets you pick which to remove.
 
 ```
-empt                  Direct children only
-empt -r               Recursive
+qc                    List all items, pick numbers to delete
+qc <pattern>          Filter by case-insensitive substring first
+```
+
+**Flow:** Displays a numbered list, then prompts for space-separated numbers to delete (or `a` for all, `0` to cancel). Confirms with y/N before actual deletion.
+
+**Example:**
+
+```
+$ qc log
+Items in CWD matching 'log':
+  1. debug.log
+  2. error.log
+  3. access.log
+
+Enter numbers to delete (space-separated), a = all, 0 = cancel
+> 1 2
+
+Will delete 2 item(s):
+  debug.log
+  error.log
+Confirm? [y/N] y
+✓ Deleted 2 item(s)
 ```
 
 ---
@@ -819,6 +862,62 @@ Auto-detects clipboard tool: `wl-copy`, `xclip`, `xsel`, `pbcopy`, or `clip.exe`
 
 ---
 
+### clipd
+
+Copy multiple files to clipboard, concatenated with comment-style headers showing each file's absolute path.
+
+```
+clipd <file1> [file2] ...
+```
+
+**Output format in clipboard:**
+
+```
+# /home/user/project/main.py
+(contents of main.py)
+
+# /home/user/project/utils.py
+(contents of utils.py)
+```
+
+**Example:**
+
+```
+$ clipd *.py
+✓ Copied 3 file(s) to clipboard
+
+$ clipd src/main.py src/config.py
+✓ Copied 2 file(s) to clipboard
+```
+
+Useful for pasting code into an LLM, a form, or a PR description.
+
+---
+
+### cbwrite
+
+Write clipboard contents to a file -- the inverse of `clip`.
+
+```
+cbwrite <filename>       Write clipboard to new file (refuses if exists)
+cbwrite -f <filename>    Overwrite existing file
+cbwrite -a <filename>    Append to file
+```
+
+Uses `wl-paste`, `xclip -o`, `xsel -o`, `pbpaste`, or `powershell.exe` (first available).
+
+**Example:**
+
+```
+$ cbwrite snippet.py
+✓ Create: 15 line(s) → snippet.py
+
+$ cbwrite -a notes.txt
+✓ Append: 3 line(s) → notes.txt
+```
+
+---
+
 ### cpath
 
 Copy a path to the clipboard.
@@ -830,25 +929,150 @@ cpath <file_or_dir>   Copy that item's absolute path
 
 ---
 
-## File Transfer & Backup
+### cpt
 
-### bak
-
-Quick single-file backup. Creates a `.bak` copy and keeps a working original.
+Copy the output of the last terminal command to the clipboard. Retrieves the command from shell history, shows it for verification, and re-runs it with output captured.
 
 ```
-bak <filename>
+cpt                   Show last command, confirm, then re-run and copy output
+cpt -y                Skip confirmation (re-run immediately)
 ```
 
 **Example:**
 
 ```
-$ bak config.yaml
-$ ls
-config.yaml  config.yaml.bak
+$ ls -la /tmp
+(output appears normally)
+
+$ cpt
+Last command:
+  $ ls -la /tmp
+
+Re-run and copy output to clipboard? [y/N] y
+✓ Copied output (15 line(s)) to clipboard
 ```
 
-The original is renamed to `.bak` and a fresh copy becomes the working file.
+Use `cpt -y` in scripts or when you're confident the command is safe to re-run.
+
+---
+
+## Inspection
+
+### sized
+
+Show the largest files or directories in CWD, ranked by size.
+
+```
+sized                 Top 10 files (direct children)
+sized -d              Top 10 directories by total size
+sized -r              Recursive (include files in subdirs)
+sized -n N            Show top N instead of 10
+```
+
+Flags are combinable: `sized -d -n 20`, `sized -r -n 5`.
+
+**Example:**
+
+```
+$ sized
+     48M  video_raw.mp4
+     12M  archive.tar.gz
+    4.0K  readme.txt
+
+$ sized -d
+    120M  photos/
+     48M  videos/
+     12M  documents/
+
+$ sized -r -n 3
+     48M  ./videos/video_raw.mp4
+     15M  ./photos/panorama.jpg
+     12M  ./archive.tar.gz
+```
+
+---
+
+## File Transfer & Backup
+
+### bak
+
+Create `.bak` backups. Accepts one or more files, or use `bak *` to backup everything in CWD.
+
+```
+bak <file>                Backup a single file
+bak <file1> <file2> ...   Backup multiple files
+bak *                     Backup all files in CWD
+```
+
+Each file is renamed to `name.ext.bak` and a fresh copy becomes the working file. Directories and existing `.bak` files are skipped automatically.
+
+**Example:**
+
+```
+$ bak config.yaml
+✓ Backed up: config.yaml → config.yaml.bak
+
+$ bak *
+✓ Backed up: app.py → app.py.bak
+✓ Backed up: config.yaml → config.yaml.bak
+✓ Backed up: readme.txt → readme.txt.bak
+
+✓ Backed up 3 file(s)
+```
+
+---
+
+### ubak
+
+Restore or clean up `.bak` files -- the reverse of `bak`. Smart about existing originals:
+
+- If the original **doesn't exist**: restores the `.bak` to its original name
+- If the original **exists and is identical**: removes the `.bak` (redundant backup)
+- If the original **exists and differs**: prompts you to choose `-k` or `-r`
+
+```
+ubak                  Process all .bak files in CWD
+ubak <file.bak>       Process a single file
+ubak -k               Keep original, discard .bak (you're done editing)
+ubak -r               Revert: replace original with .bak (undo your edits)
+ubak -f               Alias for -k (backward compatible)
+```
+
+**Example -- clean run after no edits:**
+
+```
+$ bak *
+✓ Backed up 3 file(s)
+
+$ ubak
+✓ Removed: app.py.bak (identical to app.py)
+✓ Removed: config.yaml.bak (identical to config.yaml)
+✓ Removed: readme.txt.bak (identical to readme.txt)
+
+✓ Processed 3 file(s)
+```
+
+**Example -- some files were edited, keep the edits:**
+
+```
+$ ubak
+✗ config.yaml differs from config.yaml.bak (use -k to keep original or -r to revert to backup)
+✓ Removed: app.py.bak (identical to app.py)
+
+✓ Processed 1 file(s), 1 skipped (use -k to keep or -r to revert)
+
+$ ubak -k
+✓ Kept config.yaml, removed config.yaml.bak
+
+✓ Processed 1 file(s)
+```
+
+**Example -- revert to the backup:**
+
+```
+$ ubak -r config.yaml.bak
+✓ Reverted: config.yaml replaced with config.yaml.bak
+```
 
 ---
 
@@ -918,6 +1142,83 @@ PATHS=(~/.bashrc ~/.config/nvim)   # optional; defaults to all files in repo
 
 ---
 
+## Scaffolding
+
+### template
+
+Snapshot and recreate directory structures as named templates. Useful for creating project scaffolds you reuse across multiple projects.
+
+```
+template save <name>     Snapshot CWD structure (dirs + empty files)
+template <name>          Recreate template in CWD
+template -l              List saved templates
+template -d <name>       Delete a template
+```
+
+Templates are stored in `~/.config/bashd/templates/` as tar archives. They capture the directory tree and file names (as empty placeholder files), not file contents.
+
+**Example -- save a project structure:**
+
+```
+$ ls
+src/  tests/  docs/  Makefile  README.md  .gitignore
+$ template save python-project
+✓ Saved template 'python-project' (3 dir(s), 3 file(s))
+```
+
+**Example -- recreate it elsewhere:**
+
+```
+$ mkdir new-project && cd new-project
+$ template python-project
+✓ Created structure from template 'python-project' (3 dir(s), 3 file(s))
+$ ls
+src/  tests/  docs/  Makefile  README.md  .gitignore
+```
+
+**Example -- list and manage:**
+
+```
+$ template -l
+Saved templates:
+  python-project  (9 entries)
+  node-app  (12 entries)
+
+$ template -d node-app
+✓ Deleted template 'node-app'
+```
+
+---
+
+### pland
+
+Create incremental plan markdown files with a structured template for LLM prompts. Each run creates the next numbered file in a `PLAN/` directory.
+
+```
+pland                    Create next PLAN/PLAN_NN.md
+pland -e                 Create and open in $EDITOR
+```
+
+The template includes sections for Objective, Context, Requirements, Approach, Files to Change, Edge Cases, and Testing.
+
+**Example:**
+
+```
+$ pland
+✓ Created PLAN/PLAN_01.md
+
+$ pland -e
+✓ Created PLAN/PLAN_02.md
+(opens in $EDITOR)
+
+$ ls PLAN/
+PLAN_01.md  PLAN_02.md
+```
+
+Numbering is zero-padded and auto-increments based on existing files in the `PLAN/` directory.
+
+---
+
 ## System
 
 ### topd
@@ -965,7 +1266,7 @@ namechange "doc.txt" → nest → flatten → rmpfx
 
 ```
 recase -k → undo         Any rename can be reversed
-prefix -d -i → undo
+pfx -d -i → undo
 ```
 
 **Clean up numbered sequences:**

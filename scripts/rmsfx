@@ -1,23 +1,32 @@
 #!/bin/bash
-# Remove suffix from filenames at delimiter (before extension). base_suffix.ext -> base.ext. Files
-# without enough delimiter segments are skipped. rmsfx [-n N] [delim]  Default: strip 1, delimiter _.
+# Remove suffix from filenames at delimiter (before extension). base_sfx.ext -> base.ext. Files
+# without enough delimiter segments are skipped. rmsfx [-d] [-n N] [delim]  Default: strip 1, delimiter _.
+# -d strips a date suffix (YYYY_MM_DD = 3 segments); validates the suffix looks like a date.
 
 usage() {
-  echo "Usage: rmsfx [-n N] [delim]" >&2
+  echo "Usage: rmsfx [-d] [-n N] [delim]" >&2
+  echo "  -d     Strip date suffix (YYYY_MM_DD, 3 segments)" >&2
   echo "  -n N   Strip N suffix segments (default 1)" >&2
   echo "  delim  Delimiter character (default _)" >&2
+  echo "  -d and -n are mutually exclusive." >&2
   echo "  Files with fewer segments than N are skipped." >&2
   exit 1
 }
 
 COUNT=1
-while getopts "n:" opt; do
+DATE_MODE=false
+HAS_N=false
+while getopts "dn:" opt; do
   case $opt in
-    n) COUNT="$OPTARG" ;;
+    d) DATE_MODE=true ;;
+    n) COUNT="$OPTARG"; HAS_N=true ;;
     *) usage ;;
   esac
 done
 shift $((OPTIND-1))
+
+$DATE_MODE && $HAS_N && { echo "✗ -d and -n are mutually exclusive" >&2; exit 1; }
+$DATE_MODE && COUNT=3
 
 delim="_"
 [[ $# -gt 1 ]] && usage
@@ -49,6 +58,13 @@ for f in "${sorted[@]}"; do
   if [[ "$base" == *.* ]]; then
     ext=".${base##*.}"
     base="${base%.*}"
+  fi
+
+  if $DATE_MODE; then
+    date_part="${base: -10}"
+    if [[ ! "$date_part" =~ ^[0-9]{4}_[0-9]{2}_[0-9]{2}$ ]]; then
+      continue
+    fi
   fi
 
   keep="$base"

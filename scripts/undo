@@ -1,5 +1,5 @@
 #!/bin/bash
-# Reverse the last rename operation logged by a bashd rename script (prefix, suffix, rmpfx, etc.).
+# Reverse the last rename operation logged by a bashd rename script (pfx, sfx, rmpfx, etc.).
 # undo  -- no args. Must be run from the same directory where the rename occurred.
 
 LOG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/bashd"

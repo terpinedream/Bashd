@@ -16,25 +16,53 @@ get_full_desc() {
   case "$1" in
   paclock) echo "Remove /var/lib/pacman/db.lck when pacman is stuck (run as root)." ;;
   cleanme) echo "Clear caches: no flag = system + pacman; -p pacman only (root); -s system only (~/.cache, Trash)." ;;
-  cram) echo "Move loose files into a folder: no arg = into the single subdir; cram /path = into /path." ;;
+  wrap) echo "Move loose files into a dir: wrap = into single subdir; wrap <dir> = into that dir; wrap -c <name> = create dir and move files; wrap -c -a <name> = create dir and move files + dirs." ;;
   crush) echo "Move CWD contents into parent and remove empty CWD. Source bashd-init.sh so running crush also cds to parent (default)." ;;
-  fold) echo "Create a new directory and move loose items into it: fold dirname (files only); fold -a dirname or fold --all dirname (files and dirs)." ;;
-  ufold) echo "Unpack directories in CWD: ufold unpacks all; ufold path unpacks that dir (if in CWD: move; if outside CWD: copy to CWD)." ;;
-  namechange) echo "Mass rename: namechange \"file.txt\" -> 1_file.txt, 2_file.txt, ... (underscore separator; works with nest)." ;;
+  uwrap) echo "Unpack directories in CWD: uwrap unpacks all; uwrap path unpacks that dir (if in CWD: move; if outside CWD: copy to CWD)." ;;
+  namechange) echo "Mass rename: namechange \"file.txt\" -> file-1.txt, file-2.txt, ... (ignores dirs)." ;;
   pull) echo "Move one file/dir to parent: pull <file>." ;;
+  bring) echo "Copy a file or directory into CWD: bring <path>. Complements pull (which moves to parent)." ;;
   stick) echo "Create dir and move items whose name contains dir name: stick [-i] [-w] <dir_name>; -i case-insensitive, -w whole-word only. Direct children of CWD only." ;;
   flatten) echo "Move all files from subdirs (any depth) into CWD, prefix each filename with its path (e.g. a/b/file.txt -> a_b_file.txt); then remove empty dirs. Symlinks moved as-is." ;;
   nest) echo "Create subdir from filename prefix (first delimiter, default _): prefix_rest -> prefix/rest; one level per run. nest [delim] for custom delimiter. Files with no delimiter stay in CWD." ;;
   hop) echo "Quick dir jumps: hop N = cd up N levels; hop name = cd to nearest parent whose basename matches name (case-insensitive). Source bashd-init.sh so hop also cds (like crush)." ;;
-  trim) echo "Safely remove empty dirs, zero-byte files, .DS_Store, Thumbs.db. Prints list and prompts for confirmation before deleting. -r = recursive. No broad patterns (e.g. no *.tmp)." ;;
-  prefix) echo "Add to loose filenames in CWD: -d prepend date (YYYY_MM_DD), -p append parent dir name, -i append index (001, 002, ...). Flags combinable. Two-phase rename to avoid overwrites." ;;
+  ld) echo "Cd to the last-used directory (previous CWD). Source bashd-init.sh so the shell records CWD on each prompt and ld changes directory. No args." ;;
+  ndir) echo "Create a directory and cd into it: ndir new -> mkdir new and cd to new/. Source bashd-init.sh so ndir also cds." ;;
+  cdch) echo "Cd to the directory containing the most recently modified file. Searches ~/Downloads, ~/Desktop, and CWD. Override with CDCH_DIRS. Source bashd-init.sh so cdch also cds. Use case: after downloading a file (e.g. in Firefox), run cdch to jump to that file's directory." ;;
+  tmpws) echo "Create a temp directory, cd into it, and remove it when the shell exits. -c/--copy: copy CWD contents into the temp dir first. Source bashd-init.sh so tmpws also cds; the dir is deleted on terminal close/exit." ;;
+  qs) echo "Quick navigation: qs = pick from common dirs (HOME, Documents, Downloads, etc.) and drill down; qs -s PATTERN = fuzzy search directories; qs -f PATTERN = search for file and open in \$EDITOR. Source bashd-init.sh so qs (and qs -s) cd into the chosen directory." ;;
+  bm) echo "Directory bookmarks: bm -a [dir] <name> to save (CWD if dir omitted); bm <name> to jump; bm -l to list; bm -d <name> to delete. Names can be numbers or strings (e.g. bm -a . work, then bm work). Source bashd-init.sh so bm <name> cds." ;;
+  clip) echo "Copy a file's contents to clipboard: clip <filename>. Uses wl-copy, xclip, xsel, pbcopy, or clip.exe (first available)." ;;
+  clipd) echo "Copy multiple files to clipboard with separators: clipd file1 file2 ... Each file is preceded by a # /absolute/path/to/file header line. Uses same clipboard tools as clip." ;;
+  cbwrite) echo "Write clipboard contents to a file (inverse of clip): cbwrite <filename>. Refuses if file exists; -f to overwrite, -a to append. Uses wl-paste, xclip -o, xsel -o, pbpaste, or powershell.exe." ;;
+  sized) echo "Show largest files or directories in CWD, ranked by size. sized = top 10 files; -d = directories; -r = recursive; -n N = top N. Flags combinable. Uses du + sort." ;;
+  cpath) echo "Copy a path to clipboard: cpath = CWD path; cpath <file_or_dir> = absolute path of that file or directory. Same clipboard tools as clip." ;;
+  trim) echo "Safely remove empty dirs, zero-byte files, .DS_Store, Thumbs.db. Prints list and prompts for confirmation before deleting. -r = recursive. -n = dry run (list only, no deletion)." ;;
+  pfx) echo "Add to loose filenames in CWD: -d prepend date (YYYY_MM_DD), -p append parent dir name, -i append index (001, 002, ...). Flags combinable. Two-phase rename to avoid overwrites." ;;
+  sfx) echo "Add suffix before extension: -d date, -p parent dir name, -i index (e.g. base_001.ext). sfx [-d] [-p] [-i]. Complements pfx. Only loose files in CWD." ;;
+  rmpfx) echo "Remove prefix segments from filenames at delimiter: pfx_rest.ext -> rest.ext. rmpfx [-d] [-n N] [delim]; -d strips a date prefix (YYYY_MM_DD, 3 segments) with validation; -n N strips N segments (default 1); delim default _. -d and -n are mutually exclusive." ;;
+  rmsfx) echo "Remove suffix segments from filenames at delimiter (before extension): base_sfx.ext -> base.ext. rmsfx [-d] [-n N] [delim]; -d strips a date suffix (YYYY_MM_DD, 3 segments) with validation; -n N strips N segments (default 1); delim default _. -d and -n are mutually exclusive." ;;
+  recase) echo "Batch rename loose files in CWD to a target case. Splits words on _ - space and camelCase boundaries, then reassembles: -c camelCase, -l lowercase (_), -u UPPERCASE (_), -t Title_Case (_), -k kebab-case (-). Extensions always stay lowercase. Exactly one flag required." ;;
+  undo) echo "Reverse the last rename operation (pfx, sfx, rmpfx, rmsfx, recase, namechange, gaps, lower). Must be run from the same directory where the rename occurred. Single-level undo; each rename overwrites the previous log." ;;
+  gaps) echo "Re-index numbered files to fill gaps (e.g. hello_01, hello_03, hello_05 -> hello_01, hello_02, hello_03). Detects numeric segment at the first or last delimiter boundary. gaps [delim]; default delimiter _. Preserves padding width. Single-file groups and files without a numeric segment are skipped." ;;
+  lower) echo "Sanitize filenames: lowercase, replace spaces/special chars with underscores, collapse runs. My File (Copy) [2].jpg -> my_file_copy_2.jpg. Extensions stay lowercase. Supports undo." ;;
+  split) echo "Split loose files in CWD into N roughly equal subdirectories: split 3 creates part_1/, part_2/, part_3/ and distributes files round-robin. N must be at least 2 and no greater than file count." ;;
+  mark) echo "Session breadcrumb trail: mark -a to drop a mark at CWD, mark -l to list, mark (no args) to pick and jump. Trail is per-terminal session and clears on shell exit. Source bashd-init.sh for cd support." ;;
+  byext) echo "Move loose files in CWD into subdirs by extension: file.pdf -> pdf/file.pdf; files with no extension go into noext/." ;;
+  bydate) echo "Move loose files in CWD into date subdirs by mtime. Default: YYYY/MM/DD. -M for YYYY/MM only. bydate [-M]." ;;
   dedupe) echo "Find duplicate files by content hash (sha256sum/shasum -a 256); keep first in place, move rest to _dupes/ with disambiguated names. -r = recurse into subdirs. Regular files only." ;;
   archive) echo "Archive to remote/HDD: options -w work, -i image, -v video, -k keys, -c crypt, -p path." ;;
-  bak) echo "Backup CWD to a directory: bak setup <path> to set default; then bak or bak -f; or bak [-f] <path> to override; -f overwrites if destination not empty." ;;
+  bak) echo "Backup files: bak <file> [file2] ... renames each to name.ext.bak and creates a working copy. bak * backs up all files in CWD. Skips directories and existing .bak files." ;;
+  ubak) echo "Restore .bak files: ubak <file.bak> or ubak (all in CWD). If identical, removes .bak. If original differs: -k to keep original and discard .bak, -r to revert (replace original with .bak), -f alias for -k." ;;
+  bkup) echo "Backup CWD to a directory: bkup setup <path> to set default; then bkup or bkup -f; or bkup [-f] <path> to override; -f overwrites if destination not empty." ;;
   pullfrom) echo "Pull from remote: pullfrom <remote_path> <local_path>." ;;
   pushto) echo "Push to remote: pushto <local_path> <remote_path>." ;;
   dotsync) echo "Dotfiles sync: dotsync setup <repo>, pull, link, push [-m \"msg\"]; config in ~/.config/bashd/dotsync.conf (REPO=, optional PATHS=)." ;;
   topd) echo "Top 3 by CPU; press 1/2/3 (or k1/k2/k3) to kill, q to quit. Ignores system-critical processes (WM, compositor, DE, pipewire, etc.). --ignore NAME to also ignore processes whose name contains NAME (repeatable)." ;;
+  template) echo "Snapshot and recreate directory structures. template save <name> = snapshot CWD structure; template <name> = recreate it; template -l = list; template -d <name> = delete. Templates stored in ~/.config/bashd/templates/." ;;
+  cpt) echo "Copy the output of the last terminal command to clipboard. Shows the command, asks for confirmation, re-runs it with output captured. cpt = confirm first; cpt -y = skip confirmation." ;;
+  qc) echo "Quick interactive file deletion: list items in CWD, pick numbers to delete. qc = all items; qc <pattern> = filter by case-insensitive substring. Confirms before deleting." ;;
+  pland) echo "Create incremental plan markdown files for LLM prompts. pland = create next PLAN/PLAN_NN.md with template sections (Objective, Context, Requirements, Approach, etc.); pland -e = create and open in \$EDITOR." ;;
   *)
     echo ""
     return 1
@@ -100,32 +128,60 @@ else
 fi
 row ""
 sep
-sec "CLEANUP"
+sec "CLEANUP  (scripts/cleanup/)"
 item "cleanme" "Clear caches: -p pacman, -s system, or both"
-item "cram" "Move loose files into one folder (or cram /path)"
+item "wrap" "Move files into dir; -c create; -c -a +dirs"
 item "crush" "Move CWD to parent, remove dir"
-item "fold" "Create dir, move files in; -a includes dirs"
-item "ufold" "Unpack dirs into CWD; (copy if outside)"
-item "namechange" "1_file.txt, 2_file.txt... (underscore for nest)"
+item "uwrap" "Unpack dirs into CWD; (copy if outside)"
+item "namechange" "Mass rename in CWD: namechange \"file.txt\""
 item "pull" "Move one file/dir to parent"
+item "bring" "Copy file or dir into CWD"
 item "stick" "Create dir, move items containing name; -i -w"
 item "flatten" "Move subdir files to CWD, prefix with path"
 item "nest" "prefix_rest -> prefix/rest; one level; [delim]"
 item "hop" "hop N = up N levels; hop name = match parent"
-item "trim" "Remove junk + empty dirs; confirm first; -r"
-item "prefix" "-d date, -p parent, -i index; combinable"
+item "ld" "cd to last-used directory (previous CWD)"
+item "ndir" "mkdir <name> and cd into it"
+item "cdch" "cd to dir of most recently modified file"
+item "tmpws" "temp workspace; -c copy CWD; removed on exit"
+item "qs" "quick nav: pick dir or qs -s PATTERN; -f file"
+item "bm" "bm -a [dir] name; bm name; -l list; -d del"
+item "clip" "Copy a file's contents to clipboard"
+item "clipd" "Copy multiple files to clipboard; # separators"
+item "cbwrite" "Clipboard -> file; -f overwrite, -a append"
+item "cpath" "Copy CWD or file/dir path to clipboard"
+item "cpt" "Copy last command output to clipboard"
+item "sized" "Largest files/dirs: -d dirs, -r recurse, -n N"
+item "trim" "Remove junk + empty dirs; -r recurse; -n dry run"
+item "qc" "Quick delete: pick files to remove; qc [pattern]"
+item "pfx" "-d date, -p parent, -i index; combinable"
+item "sfx" "-d date, -p parent, -i index; before ext"
+item "rmpfx" "Strip prefix at delim; -n N [delim]"
+item "rmsfx" "Strip suffix at delim; -n N [delim]"
+item "recase" "-c camel -l lower -u upper -t title -k kebab"
+item "gaps" "Re-index numbered files to fill gaps"
+item "undo" "Reverse last rename (single-level)"
+item "lower" "Sanitize filenames: lowercase + strip junk"
+item "split" "Split loose files into N equal subdirs"
+item "mark" "Session breadcrumb trail: -a mark, -l list"
+item "byext" "Move files into ext/ dirs (noext if no ext)"
+item "bydate" "Move files into YYYY/MM/DD dirs; -M month"
 item "dedupe" "Duplicates by hash -> _dupes/; -r recurse"
+item "template" "Save/recreate dir structures; save, -l, -d"
+item "pland" "Create PLAN/PLAN_NN.md for LLM prompts; -e"
 row ""
 sep
-sec "FILE TRANSFER"
+sec "FILE TRANSFER  (scripts/fileTransfer/)"
 item "archive" "Archive to remote/HDD: -w/-i/-v/-k/-c/-p"
-item "bak" "Backup CWD: bak setup <path>; then bak or bak -f"
+item "bak" "Backup files: bak <file> ... or bak * for all"
+item "ubak" "Restore/clean .bak files; smart diff; -f force"
+item "bkup" "Backup CWD: bkup setup <path>; then bkup or bkup -f"
 item "pullfrom" "Pull from remote: pullfrom <remote> <local>"
 item "pushto" "Push to remote: pushto <local> <remote>"
 item "dotsync" "Dotfiles: setup, pull, link, push"
 row ""
 sep
-sec "SYSTEM"
+sec "SYSTEM  (scripts/system/)"
 item "topd" "Top 3 by CPU; 1/2/3 to kill. --ignore NAME"
 item "paclock" "Remove db.lck when pacman is stuck (root)"
 row ""

@@ -1,0 +1,64 @@
+#!/bin/bash
+# Copy the output of the last terminal command to the clipboard.
+# Retrieves the last command from shell history, shows it, and re-runs it
+# with output captured to the clipboard. -y to skip confirmation.
+# cpt        Show last command and ask before re-running
+# cpt -y     Re-run without asking
+
+usage() {
+    echo "Usage: cpt [-y]" >&2
+    echo "  Copies the output of the last command to clipboard" >&2
+    echo "  -y  Skip confirmation (re-run immediately)" >&2
+    exit 1
+}
+
+SKIP_CONFIRM=false
+while getopts "yh" opt; do
+    case $opt in
+        y) SKIP_CONFIRM=true ;;
+        h) usage ;;
+        *) usage ;;
+    esac
+done
+
+get_clipboard_cmd() {
+    if command -v wl-copy >/dev/null 2>&1; then
+        echo "wl-copy"
+    elif command -v xclip >/dev/null 2>&1; then
+        echo "xclip -selection clipboard"
+    elif command -v xsel >/dev/null 2>&1; then
+        echo "xsel --clipboard --input"
+    elif command -v pbcopy >/dev/null 2>&1; then
+        echo "pbcopy"
+    elif command -v clip.exe >/dev/null 2>&1; then
+        echo "clip.exe"
+    else
+        echo ""
+    fi
+}
+
+clip_cmd=$(get_clipboard_cmd)
+[[ -z "$clip_cmd" ]] && {
+    echo "✗ No clipboard tool found (tried: wl-copy, xclip, xsel, pbcopy, clip.exe)" >&2
+    exit 1
+}
+
+last_cmd=$(fc -ln -1 2>/dev/null | sed 's/^[[:space:]]*//')
+
+if [[ -z "$last_cmd" ]]; then
+    echo "✗ Could not retrieve last command from history" >&2
+    exit 1
+fi
+
+if ! $SKIP_CONFIRM; then
+    echo "Last command:"
+    echo "  $ $last_cmd"
+    echo ""
+    read -r -p "Re-run and copy output to clipboard? [y/N] " ans
+    [[ "$ans" =~ ^[yY] ]] || { echo "Aborted."; exit 0; }
+fi
+
+output=$(eval "$last_cmd" 2>&1)
+printf '%s' "$output" | eval "$clip_cmd"
+lines=$(printf '%s\n' "$output" | wc -l)
+echo "✓ Copied output ($lines line(s)) to clipboard"
