@@ -8,17 +8,24 @@ BASHD_LASTDIR_FILE="${BASHD_LASTDIR_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/bash
 export PATH="$PATH:${BASHD_DIR}:${BASHD_DIR}/scripts/cleanup:${BASHD_DIR}/scripts/fileTransfer:${BASHD_DIR}/scripts/system"
 
 # Record previous CWD so 'ld' can return to it (update on each prompt when dir changes)
+# Also save last command for 'cpt' (copy last command output)
 mkdir -p "$(dirname "$BASHD_LASTDIR_FILE")" 2>/dev/null
+export BASHD_LAST_CMD_FILE="/tmp/bashd_lastcmd_$$"
 bashd_save_lastdir() {
   if [[ -n "${BASHD_CURRENT:-}" && "$PWD" != "$BASHD_CURRENT" ]]; then
     printf '%s' "$BASHD_CURRENT" > "$BASHD_LASTDIR_FILE"
   fi
   BASHD_CURRENT=$PWD
 }
+bashd_save_lastcmd() {
+  local cmd
+  cmd=$(fc -ln -1 2>/dev/null | sed 's/^[[:space:]]*//')
+  [[ -n "$cmd" && "$cmd" != "cpt"* ]] && printf '%s' "$cmd" > "$BASHD_LAST_CMD_FILE"
+}
 if [[ -n "${BASH_VERSION:-}" ]]; then
-  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }bashd_save_lastdir"
+  PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND; }bashd_save_lastdir; bashd_save_lastcmd"
 elif [[ -n "${ZSH_VERSION:-}" ]]; then
-  precmd_functions+=(bashd_save_lastdir)
+  precmd_functions+=(bashd_save_lastdir bashd_save_lastcmd)
 fi
 
 # crush: move CWD contents to parent, remove dir, and cd to parent (default behavior)
@@ -36,7 +43,7 @@ bm() {
 }
 # mark: session breadcrumb trail — file lives in /tmp, cleaned up on shell exit
 export BASHD_MARK_FILE="/tmp/bashd_marks_$$"
-trap 'rm -f "$BASHD_MARK_FILE"' EXIT
+trap 'rm -f "$BASHD_MARK_FILE" "$BASHD_LAST_CMD_FILE"' EXIT
 mark() {
   if [[ "${1:-}" == "-a" || "${1:-}" == "-l" ]]; then
     command mark "$@"
@@ -47,7 +54,9 @@ mark() {
 tmpws() {
   local need_cwd=false
   for a in "$@"; do [[ "$a" == "-c" || "$a" == "--copy" ]] && need_cwd=true; done
-  if $need_cwd; then
+  if [[ "${1:-}" == "-r" || "${1:-}" == "--return" ]]; then
+    eval "$(command tmpws "$@")"
+  elif $need_cwd; then
     eval "$(command tmpws "$@" "$(pwd)")"
   else
     eval "$(command tmpws "$@")"

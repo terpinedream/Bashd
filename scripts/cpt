@@ -1,7 +1,8 @@
 #!/bin/bash
 # Copy the output of the last terminal command to the clipboard.
-# Retrieves the last command from shell history, shows it, and re-runs it
-# with output captured to the clipboard. -y to skip confirmation.
+# Reads the last command saved by bashd-init.sh's PROMPT_COMMAND hook,
+# shows it, and re-runs it with output captured to clipboard.
+# Requires: source bashd-init.sh (saves last command to $BASHD_LAST_CMD_FILE)
 # cpt        Show last command and ask before re-running
 # cpt -y     Re-run without asking
 
@@ -9,6 +10,7 @@ usage() {
     echo "Usage: cpt [-y]" >&2
     echo "  Copies the output of the last command to clipboard" >&2
     echo "  -y  Skip confirmation (re-run immediately)" >&2
+    echo "  Requires bashd-init.sh to be sourced." >&2
     exit 1
 }
 
@@ -43,10 +45,17 @@ clip_cmd=$(get_clipboard_cmd)
     exit 1
 }
 
-last_cmd=$(fc -ln -1 2>/dev/null | sed 's/^[[:space:]]*//')
+cmd_file="${BASHD_LAST_CMD_FILE:-/tmp/bashd_lastcmd_$PPID}"
+
+if [[ ! -f "$cmd_file" ]]; then
+    echo "✗ No saved command found. Make sure bashd-init.sh is sourced." >&2
+    exit 1
+fi
+
+last_cmd=$(<"$cmd_file")
 
 if [[ -z "$last_cmd" ]]; then
-    echo "✗ Could not retrieve last command from history" >&2
+    echo "✗ Last command is empty" >&2
     exit 1
 fi
 

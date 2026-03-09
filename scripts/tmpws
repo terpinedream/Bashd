@@ -5,22 +5,42 @@
 # Use case: quick scratch workspace that disappears when you close the terminal.
 
 usage() {
-  echo "Usage: tmpws [-c|--copy] [directory]" >&2
-  echo "  tmpws           Create empty temp dir and cd into it (removed on shell exit)" >&2
-  echo "  tmpws -c [dir]   Same, but copy directory contents into the temp dir first (default: CWD)" >&2
+  echo "Usage: tmpws [-c|--copy] [directory]  |  tmpws -r" >&2
+  echo "  tmpws              Create empty temp dir and cd into it (removed on shell exit)" >&2
+  echo "  tmpws -c [dir]     Same, but copy directory contents into the temp dir first (default: CWD)" >&2
+  echo "  tmpws -r           Return to original directory and remove the temp workspace" >&2
   exit 1
 }
 
 do_copy=false
+do_return=false
 copy_from=""
 for arg in "$@"; do
   case "$arg" in
     -c|--copy) do_copy=true ;;
+    -r|--return) do_return=true ;;
     -h|--help) usage ;;
     -*) echo "Unknown option: $arg" >&2; usage ;;
     *) copy_from="$arg"; break ;;
   esac
 done
+
+if [[ "$do_return" == true ]]; then
+  if [[ -z "${TMPWS_DIR:-}" ]]; then
+    echo "✗ Not in a tmpws session" >&2
+    exit 1
+  fi
+  if [[ -z "${TMPWS_ORIGIN:-}" ]]; then
+    echo "✗ No origin directory saved" >&2
+    exit 1
+  fi
+  printf 'cd %q\n' "$TMPWS_ORIGIN"
+  printf 'rm -rf %q\n' "$TMPWS_DIR"
+  printf 'unset TMPWS_DIR TMPWS_ORIGIN\n'
+  printf 'echo "✓ Returned to %s and removed temp workspace"\n' "$TMPWS_ORIGIN"
+  exit 0
+fi
+
 [[ -n "$copy_from" && "$do_copy" != true ]] && { echo "Directory argument only valid with -c" >&2; usage; }
 # If -c was used but no directory given, use current directory
 [[ "$do_copy" == true && -z "$copy_from" ]] && copy_from=$(pwd)
@@ -47,6 +67,7 @@ if [[ "$do_copy" == true ]]; then
   fi
 fi
 
-printf 'TMPWS_DIR=%q\n' "$dir"
+printf 'export TMPWS_DIR=%q\n' "$dir"
+printf 'export TMPWS_ORIGIN=%q\n' "$(pwd)"
 printf 'cd %q\n' "$dir"
 printf 'trap '\''rm -rf "$TMPWS_DIR"'\'' EXIT\n'
