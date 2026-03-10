@@ -1,0 +1,96 @@
+#!/bin/bash
+# Move loose files into a directory. Combines former fold + cram.
+# wrap                      Move loose files into the single subdir in CWD
+# wrap <existing_dir>       Move loose files into that directory
+# wrap -c <new_name>        Create new dir, move files into it
+# wrap -c -a <new_name>     Create new dir, move files AND dirs into it
+
+usage() {
+    echo "Usage: wrap [dir]  |  wrap -c [-a] <new_name>" >&2
+    echo "  wrap              Move loose files into the single subdir" >&2
+    echo "  wrap <dir>        Move loose files into existing dir" >&2
+    echo "  wrap -c <name>    Create dir and move files into it" >&2
+    echo "  wrap -c -a <name> Create dir and move files + dirs into it" >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+CREATE=false
+ALL=false
+while getopts "cah" opt; do
+    case $opt in
+        c) CREATE=true ;;
+        a) ALL=true ;;
+        h) usage; exit 0 ;;
+        *) usage; exit 1 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+$ALL && ! $CREATE && { echo "✗ -a requires -c" >&2; exit 1; }
+
+if $CREATE; then
+    [[ $# -ne 1 ]] && { usage; exit 1; }
+    DIRNAME="$1"
+
+    [[ -e "$DIRNAME" ]] && { echo "✗ Already exists: $DIRNAME" >&2; exit 1; }
+    mkdir -p "$DIRNAME" || { echo "✗ Failed to create $DIRNAME" >&2; exit 1; }
+
+    count=0
+    for item in ./* ./.[!.]* ..?*; do
+        [[ -e "$item" ]] || continue
+        name=$(basename "$item")
+        [[ "$name" == "." || "$name" == ".." ]] && continue
+        [[ "$name" == "$DIRNAME" ]] && continue
+        if ! $ALL && [[ -d "$item" ]]; then
+            continue
+        fi
+        mv -- "$item" "$DIRNAME/" || { echo "✗ Failed to move $item" >&2; exit 1; }
+        ((count++))
+    done
+    echo "✓ Created $DIRNAME/ and moved $count item(s) into it"
+    exit 0
+fi
+
+# No -c: move loose files into existing dir
+if [[ $# -eq 1 ]]; then
+    target="$1"
+    [[ ! -d "$target" ]] && { echo "✗ Not a directory: $target" >&2; exit 1; }
+
+    count=0
+    for item in ./* ./.[!.]* ..?*; do
+        [[ -e "$item" ]] || continue
+        name=$(basename "$item")
+        [[ "$name" == "." || "$name" == ".." ]] && continue
+        [[ -d "$item" ]] && continue
+        real_item=$(realpath "$item" 2>/dev/null || echo "$item")
+        real_target=$(realpath "$target" 2>/dev/null || echo "$target")
+        [[ "$real_item" == "$real_target" ]] && continue
+        mv -- "$item" "$target/" || { echo "✗ Failed to move $item" >&2; exit 1; }
+        ((count++))
+    done
+    echo "✓ Moved $count loose file(s) into $target"
+    exit 0
+fi
+
+[[ $# -gt 0 ]] && { usage; exit 1; }
+
+# No args: find single subdirectory
+shopt -s nullglob
+dirs=(*/)
+shopt -u nullglob
+
+[[ ${#dirs[@]} -eq 0 ]] && { echo "✗ No subdirectory in current directory" >&2; exit 1; }
+[[ ${#dirs[@]} -gt 1 ]] && { echo "✗ Multiple subdirectories; specify target: wrap <dir>" >&2; exit 1; }
+
+target="${dirs[0]}"
+count=0
+for item in ./* ./.[!.]* ..?*; do
+    [[ -e "$item" ]] || continue
+    [[ -d "$item" ]] && continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    mv -- "$item" "$target" || { echo "✗ Failed to move $item" >&2; exit 1; }
+    ((count++))
+done
+echo "✓ Moved $count loose file(s) into $target"

@@ -1,0 +1,63 @@
+#!/bin/bash
+# Write clipboard contents to a file (inverse of clip).
+# cbwrite <filename>       Write clipboard to file (refuse if exists)
+# cbwrite -f <filename>    Overwrite if exists
+# cbwrite -a <filename>    Append to file
+
+usage() {
+  echo "Usage: cbwrite [-f|-a] <filename>" >&2
+  echo "  -f  Overwrite if file exists" >&2
+  echo "  -a  Append to file" >&2
+  echo "  Default: refuse if file already exists" >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+MODE="create"
+while getopts "fah" opt; do
+  case $opt in
+    f) MODE="overwrite" ;;
+    a) MODE="append" ;;
+    h) usage; exit 0 ;;
+    *) usage; exit 1 ;;
+  esac
+done
+shift $((OPTIND-1))
+
+[[ $# -ne 1 ]] && { usage; exit 1; }
+file="$1"
+
+if [[ "$MODE" == "create" && -e "$file" ]]; then
+  echo "✗ File already exists: $file (use -f to overwrite or -a to append)" >&2
+  exit 1
+fi
+
+clipboard_paste() {
+  if command -v wl-paste >/dev/null 2>&1; then
+    wl-paste 2>/dev/null
+  elif command -v xclip >/dev/null 2>&1; then
+    xclip -selection clipboard -o 2>/dev/null
+  elif command -v xsel >/dev/null 2>&1; then
+    xsel --clipboard --output 2>/dev/null
+  elif command -v pbpaste >/dev/null 2>&1; then
+    pbpaste 2>/dev/null
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -Command Get-Clipboard 2>/dev/null
+  else
+    echo "✗ No clipboard tool found (tried: wl-paste, xclip, xsel, pbpaste, powershell.exe)" >&2
+    echo "  Install one (e.g. wl-clipboard or xclip) and try again." >&2
+    exit 1
+  fi
+}
+
+content=$(clipboard_paste)
+[[ -z "$content" ]] && { echo "✗ Clipboard is empty" >&2; exit 1; }
+
+if [[ "$MODE" == "append" ]]; then
+  printf '%s\n' "$content" >> "$file" || { echo "✗ Failed to append to $file" >&2; exit 1; }
+else
+  printf '%s\n' "$content" > "$file" || { echo "✗ Failed to write $file" >&2; exit 1; }
+fi
+
+lines=$(printf '%s\n' "$content" | wc -l)
+echo "✓ ${MODE^}: $lines line(s) → $file"

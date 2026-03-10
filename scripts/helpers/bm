@@ -1,0 +1,82 @@
+#!/bin/bash
+# Directory bookmarks: save, list, delete, and jump to bookmarked paths.
+# bm -a [dir] <name>  Add bookmark (CWD if dir omitted)
+# bm -d <name>        Delete bookmark
+# bm -l               List all bookmarks
+# bm <name>           Jump to bookmark (outputs cd; source bashd-init.sh for wrapper)
+
+BM_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/bashd"
+BM_FILE="$BM_DIR/bookmarks"
+
+usage() {
+  echo "Usage: bm <name>           Jump to bookmark" >&2
+  echo "       bm -a [dir] <name>  Add bookmark (CWD if dir omitted)" >&2
+  echo "       bm -d <name>        Delete bookmark" >&2
+  echo "       bm -l               List all bookmarks" >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+[[ $# -eq 0 ]] && { usage; exit 1; }
+
+mkdir -p "$BM_DIR" 2>/dev/null
+[[ -f "$BM_FILE" ]] || touch "$BM_FILE"
+
+case "$1" in
+  -a)
+    shift
+    [[ $# -eq 0 || $# -gt 2 ]] && { usage; exit 1; }
+    if [[ $# -eq 1 ]]; then
+      dir=$(pwd)
+      name="$1"
+    else
+      dir="$1"
+      name="$2"
+    fi
+    if [[ ! -d "$dir" ]]; then
+      echo "✗ Directory not found: $dir" >&2
+      exit 1
+    fi
+    dir=$(cd "$dir" && pwd)
+    awk -F'\t' -v n="$name" '$1 != n' "$BM_FILE" > "${BM_FILE}.tmp" && mv "${BM_FILE}.tmp" "$BM_FILE"
+    printf '%s\t%s\n' "$name" "$dir" >> "$BM_FILE"
+    echo "✓ Bookmarked '$name' → $dir"
+    ;;
+  -d)
+    shift
+    [[ $# -ne 1 ]] && { usage; exit 1; }
+    name="$1"
+    if ! awk -F'\t' -v n="$name" '$1 == n { found=1; exit } END { exit !found }' "$BM_FILE"; then
+      echo "✗ Bookmark '$name' not found" >&2
+      exit 1
+    fi
+    awk -F'\t' -v n="$name" '$1 != n' "$BM_FILE" > "${BM_FILE}.tmp" && mv "${BM_FILE}.tmp" "$BM_FILE"
+    echo "✓ Removed bookmark '$name'"
+    ;;
+  -l)
+    if [[ ! -s "$BM_FILE" ]]; then
+      echo "No bookmarks saved" >&2
+      exit 0
+    fi
+    while IFS=$'\t' read -r bm_name bm_path; do
+      [[ -z "$bm_name" ]] && continue
+      printf '  %-12s %s\n' "$bm_name" "$bm_path"
+    done < "$BM_FILE"
+    ;;
+  -*)
+    usage
+    exit 1
+    ;;
+  *)
+    name="$1"
+    path=$(awk -F'\t' -v n="$name" '$1 == n { print $2; exit }' "$BM_FILE")
+    if [[ -z "$path" ]]; then
+      echo "✗ Bookmark '$name' not found" >&2
+      exit 1
+    fi
+    if [[ ! -d "$path" ]]; then
+      echo "✗ Bookmarked path no longer exists: $path" >&2
+      exit 1
+    fi
+    printf 'cd %q\n' "$path"
+    ;;
+esac

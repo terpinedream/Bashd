@@ -1,0 +1,25 @@
+#!/bin/bash
+
+usage() {
+  echo -e "Usage: pushto <local_path> <remote_path>\n  Push files to a remote location."
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+if [ "$#" -ne 2 ]; then
+  usage
+  exit 1
+fi
+
+LOCAL_PATH="$1"
+REMOTE_PATH="$2"
+REMOTE_HOST="HOST@NAME"
+
+scp -r "$LOCAL_PATH" "${REMOTE_HOST}:${REMOTE_PATH}"
+
+if [ $? -eq 0 ]; then
+  echo "✓ Successfully pushed to remote"
+else
+  echo "✗ Transfer failed"
+  exit 1
+fi

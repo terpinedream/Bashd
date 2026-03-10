@@ -1,0 +1,91 @@
+#!/bin/bash
+# Session breadcrumb trail: drop marks at directories and jump back to them.
+# mark -a           Add CWD to trail
+# mark -l           List trail
+# mark              Interactive pick (outputs cd for wrapper)
+# Trail is per-terminal session; cleared when the shell exits.
+
+MARK_FILE="${BASHD_MARK_FILE:-}"
+
+if [[ -z "$MARK_FILE" ]]; then
+  echo "✗ mark requires bashd-init.sh to be sourced" >&2
+  exit 1
+fi
+
+usage() {
+  echo "Usage: mark -a        Add CWD to trail" >&2
+  echo "       mark -l        List trail" >&2
+  echo "       mark            Pick a mark to jump to" >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+case "${1:-}" in
+  -a)
+    dir=$(pwd)
+    # Don't add duplicates of the most recent mark
+    if [[ -f "$MARK_FILE" ]]; then
+      last=$(tail -n 1 "$MARK_FILE")
+      if [[ "$last" == "$dir" ]]; then
+        echo "Already marked: $dir"
+        exit 0
+      fi
+    fi
+    printf '%s\n' "$dir" >> "$MARK_FILE"
+    echo "✓ Marked: $dir"
+    ;;
+  -l)
+    if [[ ! -s "$MARK_FILE" ]]; then
+      echo "No marks in this session" >&2
+      exit 0
+    fi
+    echo "Breadcrumb trail:" >&2
+    local_i=1
+    while IFS= read -r p; do
+      [[ -z "$p" ]] && continue
+      printf '  [%d] %s\n' "$local_i" "$p" >&2
+      ((local_i++))
+    done < "$MARK_FILE"
+    ;;
+  "")
+    if [[ ! -s "$MARK_FILE" ]]; then
+      echo "No marks in this session" >&2
+      exit 1
+    fi
+    marks=()
+    while IFS= read -r p; do
+      [[ -z "$p" ]] && continue
+      marks+=("$p")
+    done < "$MARK_FILE"
+    if [[ ${#marks[@]} -eq 0 ]]; then
+      echo "No marks in this session" >&2
+      exit 1
+    fi
+
+    echo "Breadcrumb trail (0 = cancel):" >&2
+    for i in "${!marks[@]}"; do
+      printf '  [%d] %s\n' "$(( i + 1 ))" "${marks[$i]}" >&2
+    done
+    echo "" >&2
+    printf "Jump to: " >&2
+    read -r num </dev/tty
+
+    if [[ "$num" == "0" ]]; then
+      exit 0
+    fi
+    if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 ]] && [[ "$num" -le ${#marks[@]} ]]; then
+      target="${marks[$(( num - 1 ))]}"
+      if [[ ! -d "$target" ]]; then
+        echo "✗ Directory no longer exists: $target" >&2
+        exit 1
+      fi
+      printf 'cd %q\n' "$target"
+    else
+      echo "Invalid choice." >&2
+      exit 1
+    fi
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

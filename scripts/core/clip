@@ -1,0 +1,36 @@
+#!/bin/bash
+# Copy a file's contents to the system clipboard.
+# Usage: clip <filename>
+
+usage() {
+  echo "Usage: clip <filename>" >&2
+  echo "  Copies the file contents to your clipboard" >&2
+  exit 0
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+[[ $# -ne 1 ]] && usage
+file="$1"
+
+[[ ! -e "$file" ]] && { echo "✗ No such file: $file" >&2; exit 1; }
+[[ ! -f "$file" ]] && { echo "✗ Not a regular file: $file" >&2; exit 1; }
+[[ ! -r "$file" ]] && { echo "✗ File is not readable: $file" >&2; exit 1; }
+
+if command -v wl-copy >/dev/null 2>&1; then
+  wl-copy <"$file"
+elif command -v xclip >/dev/null 2>&1; then
+  xclip -selection clipboard <"$file"
+elif command -v xsel >/dev/null 2>&1; then
+  xsel --clipboard --input <"$file"
+elif command -v pbcopy >/dev/null 2>&1; then
+  pbcopy <"$file"
+elif command -v clip.exe >/dev/null 2>&1; then
+  clip.exe <"$file"
+else
+  echo "✗ No clipboard tool found (tried: wl-copy, xclip, xsel, pbcopy, clip.exe)" >&2
+  echo "  Install one (e.g. wl-clipboard or xclip) and try again." >&2
+  exit 1
+fi
+
+echo "✓ Copied contents of '$file' to clipboard"

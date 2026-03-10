@@ -2,7 +2,7 @@
 
 This document covers every script in the toolkit with full syntax, examples, and tips.
 
-For quick reference, run `bashd` to see the ASCII chart, or `bashd --<command>` for a one-line description of any command.
+For quick reference, run `bashd --chart` to see the ASCII chart, or `bashd --help <command>` for a detailed description of any command.
 
 ---
 
@@ -44,15 +44,64 @@ For quick reference, run `bashd` to see the ASCII chart, or `bashd --<command>` 
 
 ## Setup
 
-Most scripts work standalone. Just copy or symlink them to a directory on your `PATH` (e.g. `/usr/local/bin`).
-
-Scripts that change your shell's working directory (`crush`, `hop`, `ld`, `ndir`, `cdch`, `tmpws`, `qs`, `bm`, `mark`) require sourcing the init file in your `~/.bashrc` or `~/.zshrc`:
+### Install
 
 ```bash
+# Clone the repo
+git clone https://github.com/terpinedream/Bashd.git && cd Bashd
+
+# Install core + helpers (recommended)
+sudo make install-core
+
+# Or install everything
+sudo make install-all
+
+# Custom prefix
+sudo make install-all PREFIX=/opt/bashd
+```
+
+### Shell Init
+
+Source the init file in your `~/.bashrc` or `~/.zshrc`:
+
+```bash
+# After make install:
+source /usr/local/bin/bashd-scripts/bashd-init.sh
+
+# Or if running from the repo directly:
 source /path/to/Bashd/scripts/bashd-init.sh
 ```
 
-If you symlink scripts to `/usr/bin`, make sure `_bashd_log` is also symlinked there (it's needed by all rename scripts for undo support).
+This sets up the `bashd` dispatcher, cd-requiring shell wrappers, prompt hooks, and config-driven aliases. See [Alias Configuration](#alias-configuration) below.
+
+### Dispatcher
+
+All commands are available through the `bashd` dispatcher:
+
+```bash
+bashd pfx -d               # run a command
+bashd --help pfx            # detailed help for a command
+bashd --chart               # ASCII chart of all commands
+bashd --list                # list all commands
+bashd --list core           # list only core commands
+bashd alias                 # print current alias definitions
+bashd alias --default       # generate default aliases.conf
+```
+
+### Alias Configuration
+
+Control which commands get bare aliases via `~/.config/bashd/aliases.conf`:
+
+```bash
+# One command per line. Lines starting with # are comments.
+pfx
+sfx
+trim
+hop
+lower
+```
+
+If the config file doesn't exist, all core + helper commands get aliases by default (backward compatible). Run `bashd alias --default` to generate a config file with all defaults.
 
 ---
 

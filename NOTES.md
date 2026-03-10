@@ -24,7 +24,7 @@ The toolkit targets a specific workflow: you have a directory of files and you n
 
 **Safety defaults.** Destructive operations (`trim`, `qc`, `crush`) always confirm before acting. Rename operations all support `undo`. `tmpws` cleans up on exit. `bak`/`ubak` handle identical file detection intelligently.
 
-**Zero dependencies.** Everything is bash + coreutils. No Python, Perl, Rust, Go, or npm. Copy the scripts to `/usr/local/bin` and they work. This matters for minimal servers, containers, and air-gapped environments.
+**Zero dependencies.** Everything is bash + coreutils. No Python, Perl, Rust, Go, or npm. Run `make install-core` and they work. This matters for minimal servers, containers, and air-gapped environments.
 
 **Consistent interface.** Scripts follow the same conventions: `getopts` for flags, two-phase renames where applicable, same file iteration patterns, same output style (checkmark on success, X on failure, stderr for errors).
 
@@ -50,10 +50,10 @@ Sourcing `bashd-init.sh` modifies your shell environment: it appends to `PROMPT_
 
 ## Room for Improvement
 
-**Testing.** There is no automated test suite. For a toolkit that batch-renames and deletes files, this is a real gap. Integration tests using temp directories would go a long way toward confidence.
+**Testing.** The automated test suite covers the rename pipeline and organization scripts (65+ assertions across 17 test files), but helpers, extras, and interactive scripts aren't tested yet. Expanding coverage to navigation scripts and edge cases would increase confidence further.
 
-**Installation.** The setup story is manual. A `Makefile` with `install`/`uninstall` targets, or packaging for AUR/Homebrew/Nix, would lower the barrier significantly. The AUR package hasn't been updated in awhile, but will be after some more safeguards are put in place. 
+**Installation.** The Makefile provides `install-core`, `install-extra`, `install-all`, and `uninstall` targets. Packaging for AUR/Homebrew/Nix would lower the barrier further. The AUR package hasn't been updated in awhile, but will be once the project is a bit more polished.
 
 **Overlap with existing tools.** Some scripts cover ground already served by established tools (`zoxide` for navigation, Perl `rename` for batch renaming, `fdupes` for deduplication, `ncdu`/`dust` for disk usage). Bashd's value isn't that these scripts are better than dedicated alternatives in isolation -- it's that they're a single, consistent, dependency-free set that work together. But I recognize the overlap exists, and users who already have those tools installed may find parts of the toolkit redundant.
 
-**Scope.** The toolkit has grown beyond the original "handful of helpers" scope. Not every script is equally essential. The core strength is the rename/organize pipeline; some of the peripheral scripts are more situational. Future branches for different sets of scripts grouped by functionality are on my radar if there is interest. 
+**Scope.** Scripts are now categorized into core (30 essential rename/organize/clipboard/cleanup tools), helpers (9 cd-requiring navigation tools), and extra (10 niche/system utilities). The `bashd` dispatcher provides a single entry point, and the config-driven alias system lets users control which commands they want available without the prefix.

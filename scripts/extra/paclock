@@ -1,0 +1,27 @@
+#!/bin/bash
+# Script to remove the always pesky db.lck file that locks pacman
+
+usage() {
+  echo -e "Usage: paclock\n  Remove /var/lib/pacman/db.lck when pacman is stuck (run as root)."
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+DB_LOCK="/var/lib/pacman/db.lck"
+
+if [[ $EUID -ne 0 ]]; then
+    echo "paclock must be run as root (e.g. sudo paclock)"
+    exit 1
+fi
+
+if [[ ! -f "$DB_LOCK" ]]; then
+    echo "No db.lck found - pacman is not locked"
+    exit 0
+fi
+
+if rm -f -- "$DB_LOCK"; then
+    echo "✓ Removed $DB_LOCK"
+else
+    echo "✗ Failed to remove $DB_LOCK"
+    exit 1
+fi

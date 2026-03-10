@@ -1,0 +1,39 @@
+#!/bin/bash
+# Move loose files in CWD into subdirs by extension. file.pdf -> pdf/file.pdf; files with no extension -> noext/.
+# byext  Only regular files, direct children. Creates dirs as needed.
+
+usage() {
+  echo "Usage: byext" >&2
+  echo "  Moves each loose file into a directory named by its extension (e.g. pdf/file.pdf). No-extension files go into noext/." >&2
+  exit 0
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+[[ $# -gt 0 ]] && usage
+
+files=()
+for item in ./* ./.[!.]* ..?*; do
+  [[ -e "$item" ]] || continue
+  [[ -f "$item" ]] || continue
+  name=$(basename "$item")
+  [[ "$name" == "." || "$name" == ".." ]] && continue
+  files+=("$item")
+done
+[[ ${#files[@]} -eq 0 ]] && { echo "No files to organize"; exit 0; }
+
+count=0
+for f in "${files[@]}"; do
+  [[ -e "$f" ]] || continue
+  base=$(basename "$f")
+  if [[ "$base" == *.* ]]; then
+    ext="${base##*.}"
+    dir="$ext"
+  else
+    dir="noext"
+  fi
+  mkdir -p "$dir" || { echo "✗ Failed to create $dir" >&2; exit 1; }
+  mv -- "$f" "$dir/" || { echo "✗ Failed to move $f" >&2; exit 1; }
+  ((count++))
+done
+echo "✓ Moved $count file(s) into extension dirs"

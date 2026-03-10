@@ -1,0 +1,143 @@
+#!/bin/bash
+# Re-index numbered files to fill gaps. Detects numeric segment at start or end of base name
+# (at the delimiter boundary) and re-numbers sequentially from 1. Preserves padding width.
+# gaps [delim]  Default delimiter _. Files without a numeric boundary segment are skipped.
+
+usage() {
+  echo "Usage: gaps [delim]" >&2
+  echo "  delim  Delimiter character (default _)" >&2
+  echo "  Re-indexes numbered files to fill gaps (e.g. 01,03,05 -> 01,02,03)." >&2
+  echo "  Files without a numeric delimiter segment are skipped." >&2
+  exit 1
+}
+
+[[ "$1" == "-h" || "$1" == "--help" ]] && usage
+
+delim="_"
+[[ $# -gt 1 ]] && usage
+[[ $# -eq 1 ]] && delim="$1"
+
+source "$(dirname "$(readlink -f "$0")")/../_bashd_log"
+
+files=()
+for item in ./* ./.[!.]* ..?*; do
+  [[ -e "$item" ]] || continue
+  [[ -f "$item" ]] || continue
+  name=$(basename "$item")
+  [[ "$name" == "." || "$name" == ".." ]] && continue
+  files+=("$name")
+done
+[[ ${#files[@]} -eq 0 ]] && { echo "No files found"; exit 0; }
+
+declare -A groups
+declare -A group_pos
+declare -A group_width
+
+for name in "${files[@]}"; do
+  base="$name"
+  ext=""
+  if [[ "$base" == *.* ]]; then
+    ext=".${base##*.}"
+    base="${base%.*}"
+  fi
+
+  [[ "$base" != *"$delim"* ]] && continue
+
+  last="${base##*"$delim"}"
+  first="${base%%"$delim"*}"
+  pos="" num="" key=""
+
+  if [[ "$last" =~ ^[0-9]+$ ]]; then
+    pos="suffix"
+    num="$last"
+    stem="${base%"$delim"*}"
+    key="S:${stem}${ext}"
+  elif [[ "$first" =~ ^[0-9]+$ ]]; then
+    pos="prefix"
+    num="$first"
+    rest="${base#*"$delim"}"
+    key="P:${rest}${ext}"
+  else
+    continue
+  fi
+
+  width=${#num}
+  numval=$((10#$num))
+
+  groups["$key"]+="${numval}:${name}"$'\n'
+  group_pos["$key"]="$pos"
+  if [[ -z "${group_width[$key]}" ]] || [[ $width -gt ${group_width[$key]} ]]; then
+    group_width["$key"]=$width
+  fi
+done
+
+[[ ${#groups[@]} -eq 0 ]] && { echo "No numbered files found"; exit 0; }
+
+tmp_suffix=".gaps.$$"
+bashd_log_start "gaps"
+renamed=0
+
+for key in "${!groups[@]}"; do
+  pos="${group_pos[$key]}"
+  width="${group_width[$key]}"
+
+  entries=()
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    entries+=("$line")
+  done <<< "${groups[$key]}"
+
+  [[ ${#entries[@]} -le 1 ]] && continue
+
+  IFS=$'\n' read -r -d '' -a sorted < <(printf '%s\n' "${entries[@]}" | sort -t: -k1 -n) || true
+  [[ ${#sorted[@]} -eq 0 ]] && sorted=("${entries[@]}")
+
+  needs_reindex=false
+  i=1
+  for entry in "${sorted[@]}"; do
+    numval="${entry%%:*}"
+    if [[ $numval -ne $i ]]; then
+      needs_reindex=true
+      break
+    fi
+    ((i++))
+  done
+  $needs_reindex || continue
+
+  i=1
+  for entry in "${sorted[@]}"; do
+    oldname="${entry#*:}"
+    base="$oldname"
+    ext=""
+    if [[ "$base" == *.* ]]; then
+      ext=".${base##*.}"
+      base="${base%.*}"
+    fi
+
+    newnum=$(printf "%0${width}d" "$i")
+
+    if [[ "$pos" == "suffix" ]]; then
+      stem="${base%"$delim"*}"
+      newname="${stem}${delim}${newnum}${ext}"
+    else
+      rest="${base#*"$delim"}"
+      newname="${newnum}${delim}${rest}${ext}"
+    fi
+
+    mv -- "$oldname" "${newname}${tmp_suffix}" || { echo "✗ Failed to rename $oldname" >&2; exit 1; }
+    if [[ "$oldname" != "$newname" ]]; then
+      bashd_log "$oldname" "$newname"
+      ((renamed++))
+    fi
+    ((i++))
+  done
+done
+
+for item in *"${tmp_suffix}"; do
+  [[ -e "$item" ]] || [[ -L "$item" ]] || continue
+  final="${item%${tmp_suffix}}"
+  mv -- "$item" "$final" || { echo "✗ Failed to finalize $item" >&2; exit 1; }
+done
+
+[[ $renamed -eq 0 ]] && { echo "No gaps to fill"; exit 0; }
+echo "✓ Re-indexed $renamed file(s)"

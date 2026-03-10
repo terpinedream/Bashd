@@ -1,0 +1,99 @@
+#!/bin/bash
+# Copy contents of CWD to specified backup path (same as former 'bak').
+# 'bkup setup <path>' -> save default backup directory (use 'bkup' or 'bkup -f' afterward)
+# 'bkup [-f] [path]' -> copy CWD into path (or saved path if no path given)
+# -f: allow overwriting existing files in destination
+
+usage() {
+  echo -e "Usage: bkup [-f] [path]\n  Backup CWD to a directory. bkup setup <path> to set default."
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+BKUPDEST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/bashd/bkup_dest"
+
+read_saved_dest() {
+  [[ -f "$BKUPDEST_FILE" ]] && cat "$BKUPDEST_FILE"
+}
+
+save_dest() {
+  local path="$1"
+  path=$(realpath -m "$path" 2>/dev/null || echo "$path")
+  mkdir -p "${BKUPDEST_FILE%/*}" || {
+    echo "✗ Failed to create config directory"
+    return 1
+  }
+  echo "$path" >"$BKUPDEST_FILE" || {
+    echo "✗ Failed to save path"
+    return 1
+  }
+  echo "✓ Default backup path set to: $path"
+}
+
+# bkup setup <path>
+if [[ "$1" == "setup" ]]; then
+  if [[ -z "$2" ]]; then
+    echo "Usage: bkup setup <backup_directory>"
+    echo "  Saves the path so you can run 'bkup' or 'bkup -f' without typing it again"
+    exit 1
+  fi
+  save_dest "$2"
+  exit $?
+fi
+
+force=""
+dest=""
+
+if [[ $# -eq 0 ]]; then
+  dest=$(read_saved_dest)
+  if [[ -z "$dest" ]]; then
+    echo "No backup path set. Run: bkup setup <backup_directory>"
+    echo "Or specify path: bkup [-f] <backup_directory>"
+    exit 1
+  fi
+elif [[ "$1" == "-f" ]]; then
+  if [[ -n "$2" ]]; then
+    force="-f"
+    dest="$2"
+  else
+    dest=$(read_saved_dest)
+    if [[ -z "$dest" ]]; then
+      echo "No backup path set. Run: bkup setup <backup_directory>"
+      echo "Or specify path: bkup -f <backup_directory>"
+      exit 1
+    fi
+    force="-f"
+  fi
+else
+  dest="$1"
+fi
+
+[[ -z "$dest" ]] && {
+  echo "Usage: bkup setup <path>  OR  bkup [-f] [path]"
+  exit 1
+}
+
+dest=$(realpath -m "$dest" 2>/dev/null || echo "$dest")
+mkdir -p "$dest" || {
+  echo "✗ Failed to create $dest"
+  exit 1
+}
+
+if [[ -d "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null)" ]] && [[ -z "$force" ]]; then
+  echo "✗ Destination not empty. Use -f to overwrite: bkup -f $dest"
+  exit 1
+fi
+
+# Copy all contents (including hidden) into dest
+shopt -s dotglob nullglob
+items=(*)
+shopt -u dotglob nullglob
+for item in "${items[@]}"; do
+  [[ -e "$item" ]] || continue
+  if ! cp -r ${force:+"-f"} -- "$item" "$dest/"; then
+    echo "✗ Failed to copy $item"
+    exit 1
+  fi
+done
+
+echo "✓ Backed up to $dest"

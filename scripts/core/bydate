@@ -1,0 +1,55 @@
+#!/bin/bash
+# Move loose files in CWD into date subdirs by mtime. -M = YYYY/MM, default = YYYY/MM/DD.
+# bydate [-M]  Only regular files, direct children. Creates dirs as needed.
+
+usage() {
+  echo "Usage: bydate [-M]" >&2
+  echo "  Moves each loose file into a directory by its modification date." >&2
+  echo "  Default: YYYY/MM/DD (e.g. 2025/02/16/file.txt)" >&2
+  echo "  -M  Month only: YYYY/MM" >&2
+  exit 0
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+MONTH_ONLY=false
+while getopts "M" opt; do
+  case $opt in
+    M) MONTH_ONLY=true ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND-1))
+[[ $# -gt 0 ]] && usage
+
+files=()
+for item in ./* ./.[!.]* ..?*; do
+  [[ -e "$item" ]] || continue
+  [[ -f "$item" ]] || continue
+  name=$(basename "$item")
+  [[ "$name" == "." || "$name" == ".." ]] && continue
+  files+=("$item")
+done
+[[ ${#files[@]} -eq 0 ]] && { echo "No files to organize"; exit 0; }
+
+# Get YYYY-MM-DD from file mtime (portable: perl)
+get_date() {
+  perl -e 'use File::stat; my $m=stat($ARGV[0])->mtime or exit 1; @t=localtime($m); printf "%04d-%02d-%02d\n", $t[5]+1900, $t[4]+1, $t[3]' "$1"
+}
+
+count=0
+for f in "${files[@]}"; do
+  [[ -e "$f" ]] || continue
+  mtime=$(get_date "$f")
+  [[ -z "$mtime" ]] && { echo "✗ Could not get date for $f" >&2; continue; }
+  if [[ "$MONTH_ONLY" == true ]]; then
+    dir="${mtime%-*}"
+    dir="${dir//-/\/}"
+  else
+    dir="${mtime//-/\/}"
+  fi
+  mkdir -p "$dir" || { echo "✗ Failed to create $dir" >&2; exit 1; }
+  mv -- "$f" "$dir/" || { echo "✗ Failed to move $f" >&2; exit 1; }
+  ((count++))
+done
+echo "✓ Moved $count file(s) into date dirs"

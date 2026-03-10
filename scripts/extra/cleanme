@@ -1,0 +1,90 @@
+#!/bin/bash
+# Script to safely clear system/pacman cache
+# 'cleanme' = both, '-p' = pacman only, '-s' = system only
+# System: ~/.cache and ~/.local/share/Trash (safe, non-destructive)
+
+PACMAN_CACHE="/var/cache/pacman/pkg"
+KEEP_PKG=2
+
+usage() {
+    echo "Usage: cleanme [-p|-s]"
+    echo "  (no flag)  Pacman + system cache"
+    echo "  -p         Pacman cache only (requires root)"
+    echo "  -s         System cache only (~/.cache, Trash)"
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+do_pacman() {
+    if [[ $EUID -ne 0 ]]; then
+        echo "Pacman cache cleanup requires root (e.g. sudo cleanme -p)"
+        return 1
+    fi
+    if [[ ! -d "$PACMAN_CACHE" ]]; then
+        echo "✗ Pacman cache not found: $PACMAN_CACHE"
+        return 1
+    fi
+    if command -v paccache &>/dev/null; then
+        paccache -rk "$KEEP_PKG" -q
+        echo "✓ Pacman cache cleaned (kept last $KEEP_PKG versions)"
+    else
+        # Fallback: delete .pkg older than 7 days, keep at least 1 per package (simplified)
+        deleted=0
+        for f in "$PACMAN_CACHE"/*.pkg.tar.*; do
+            [[ -e "$f" ]] || continue
+            # Keep recent; remove if older than 7 days
+            if [[ $(find "$f" -mtime +7 2>/dev/null) ]]; then
+                rm -f -- "$f" && ((deleted++))
+            fi
+        done
+        echo "✓ Pacman cache: removed $deleted old package(s)"
+    fi
+}
+
+do_system() {
+    cleared=""
+    if [[ -d "$HOME/.cache" ]]; then
+        # Clear contents, not the dir itself (some apps need .cache to exist)
+        count=$(find "$HOME/.cache" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l)
+        rm -rf -- "$HOME/.cache"/*
+        [[ $count -gt 0 ]] && cleared="$HOME/.cache"
+    fi
+    if [[ -d "$HOME/.local/share/Trash" ]]; then
+        rm -rf -- "$HOME/.local/share/Trash/files"/* 2>/dev/null
+        rm -rf -- "$HOME/.local/share/Trash/info"/* 2>/dev/null
+        cleared="${cleared:+$cleared, }Trash"
+    fi
+    if [[ -n "$cleared" ]]; then
+        echo "✓ Cleared: $cleared"
+    else
+        echo "✓ System cache (nothing to clear)"
+    fi
+}
+
+mode=""
+while getopts "ps" opt; do
+    case $opt in
+        p) mode="p" ;;
+        s) mode="s" ;;
+        *) usage; exit 1 ;;
+    esac
+done
+[[ -n "$OPTARG" ]] && { usage; exit 1; }
+shift $((OPTIND - 1))
+[[ $# -gt 0 ]] && { usage; exit 1; }
+
+if [[ "$mode" == "p" ]]; then
+    do_pacman
+elif [[ "$mode" == "s" ]]; then
+    do_system
+elif [[ -z "$mode" ]]; then
+    do_system
+    if [[ $EUID -eq 0 ]]; then
+        do_pacman
+    else
+        echo "Run with sudo for pacman cache: sudo cleanme -p"
+    fi
+else
+    usage
+    exit 1
+fi

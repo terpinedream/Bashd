@@ -1,0 +1,49 @@
+#!/bin/bash
+# Copy the path of CWD or a specified file/dir to the clipboard.
+# Usage: cpath [file_or_dir]
+#   No arg: copy current directory path. With arg: copy that path (resolved to absolute).
+
+usage() {
+  echo "Usage: cpath [file_or_dir]" >&2
+  echo "  No arg: copy CWD path to clipboard" >&2
+  echo "  With arg: copy the path of that file or directory (absolute)" >&2
+  exit 0
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+[[ $# -gt 1 ]] && usage
+
+if [[ $# -eq 0 ]]; then
+  path=$(pwd)
+  realpath . &>/dev/null && path=$(realpath .)
+else
+  target="$1"
+  [[ ! -e "$target" ]] && { echo "✗ No such file or directory: $target" >&2; exit 1; }
+  if realpath "$target" &>/dev/null; then
+    path=$(realpath "$target")
+  else
+    path=$(cd "$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target")
+  fi
+fi
+
+if command -v wl-copy >/dev/null 2>&1; then
+  printf '%s' "$path" | wl-copy
+elif command -v xclip >/dev/null 2>&1; then
+  printf '%s' "$path" | xclip -selection clipboard
+elif command -v xsel >/dev/null 2>&1; then
+  printf '%s' "$path" | xsel --clipboard --input
+elif command -v pbcopy >/dev/null 2>&1; then
+  printf '%s' "$path" | pbcopy
+elif command -v clip.exe >/dev/null 2>&1; then
+  printf '%s' "$path" | clip.exe
+else
+  echo "✗ No clipboard tool found (tried: wl-copy, xclip, xsel, pbcopy, clip.exe)" >&2
+  exit 1
+fi
+
+if [[ $# -eq 0 ]]; then
+  echo "✓ Copied CWD path to clipboard"
+else
+  echo "✓ Copied path to clipboard"
+fi

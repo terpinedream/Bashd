@@ -1,0 +1,84 @@
+#!/bin/bash
+# Reverse the last rename operation logged by a bashd rename script (pfx, sfx, rmpfx, etc.).
+# undo  -- no args. Must be run from the same directory where the rename occurred.
+
+usage() {
+  printf 'Usage: undo\n  Reverse the last rename operation (pfx, sfx, rmpfx, rmsfx, recase, etc.).\n' >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+LOG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/bashd"
+LOG_FILE="$LOG_DIR/last_rename"
+
+if [[ ! -f "$LOG_FILE" ]]; then
+  echo "✗ Nothing to undo (no rename log found)" >&2
+  exit 1
+fi
+
+cmd=""
+dir=""
+pairs=()
+while IFS= read -r line; do
+  case "$line" in
+    CMD:*) cmd="${line#CMD:}" ;;
+    DIR:*) dir="${line#DIR:}" ;;
+    *)
+      [[ -z "$line" ]] && continue
+      pairs+=("$line")
+      ;;
+  esac
+done < "$LOG_FILE"
+
+if [[ -z "$cmd" ]] || [[ -z "$dir" ]] || [[ ${#pairs[@]} -eq 0 ]]; then
+  echo "✗ Rename log is empty or malformed" >&2
+  exit 1
+fi
+
+cwd=$(pwd)
+if [[ "$cwd" != "$dir" ]]; then
+  echo "✗ Wrong directory. The last rename ($cmd) was in:" >&2
+  echo "  $dir" >&2
+  echo "  cd there and run undo again." >&2
+  exit 1
+fi
+
+tmp_suffix=".undo.$$"
+restored=0
+undo_targets=()
+
+# Phase 1: move all renamed files to temp names (keyed by the original name)
+for entry in "${pairs[@]}"; do
+  old="${entry%%	*}"
+  new="${entry#*	}"
+  [[ -z "$old" ]] || [[ -z "$new" ]] && continue
+  if [[ ! -e "$new" ]]; then
+    echo "  skip: $new (not found)" >&2
+    continue
+  fi
+  mv -- "$new" "${old}${tmp_suffix}" || { echo "✗ Failed to restore $new -> $old" >&2; exit 1; }
+  undo_targets+=("$old")
+  ((restored++))
+done
+
+# Phase 2: move temp files to their original names
+for old in "${undo_targets[@]}"; do
+  dest="$old"
+  n=2
+  while [[ -e "$dest" ]]; do
+    ext=""
+    base="$old"
+    if [[ "$base" == *.* ]]; then
+      ext=".${base##*.}"
+      base="${base%.*}"
+    fi
+    dest="${base}_${n}${ext}"
+    ((n++))
+  done
+  mv -- "${old}${tmp_suffix}" "$dest" || { echo "✗ Failed to finalize $old" >&2; exit 1; }
+done
+
+rm -f "$LOG_FILE"
+
+[[ $restored -eq 0 ]] && { echo "✗ No files could be restored" >&2; exit 1; }
+echo "✓ Reversed $restored rename(s) from $cmd"

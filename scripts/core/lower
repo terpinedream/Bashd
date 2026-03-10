@@ -1,0 +1,73 @@
+#!/bin/bash
+# Sanitize filenames: lowercase, spaces/special chars to underscores, collapse runs.
+# lower   No arguments. Only regular files, direct children of CWD.
+
+usage() {
+  printf 'Usage: lower\n  Sanitize filenames: lowercase, strip special chars, collapse underscores.\n' >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+source "$(dirname "$(readlink -f "$0")")/../_bashd_log"
+
+sanitize() {
+  local s="$1"
+  s="${s,,}"
+  s=$(printf '%s' "$s" | tr ' ()[]{}'"'"'",;&+@!#$%^=~`' '_')
+  while [[ "$s" == *__* ]]; do s="${s//__/_}"; done
+  while [[ "$s" == *_-_* ]]; do s="${s//_-_/_}"; done
+  s="${s#_}"
+  s="${s%_}"
+  printf '%s' "$s"
+}
+
+files=()
+for item in ./* ./.[!.]* ..?*; do
+  [[ -e "$item" ]] || continue
+  [[ -f "$item" ]] || continue
+  name=$(basename "$item")
+  [[ "$name" == "." || "$name" == ".." ]] && continue
+  files+=("$item")
+done
+[[ ${#files[@]} -eq 0 ]] && { echo "No files to rename"; exit 0; }
+
+IFS=$'\n' read -r -d '' -a sorted < <(printf '%s\n' "${files[@]}" | sort) || true
+[[ ${#sorted[@]} -eq 0 ]] && sorted=("${files[@]}")
+
+tmp_suffix=".lower.$$"
+bashd_log_start "lower"
+renamed=0
+
+for f in "${sorted[@]}"; do
+  [[ -e "$f" ]] || continue
+  base=$(basename "$f")
+  ext=""
+  if [[ "$base" == *.* ]]; then
+    ext=".${base##*.}"
+    base="${base%.*}"
+  fi
+
+  newbase=$(sanitize "$base")
+  [[ -z "$newbase" ]] && continue
+  ext="${ext,,}"
+  newname="${newbase}${ext}"
+  [[ "$newname" == "$(basename "$f")" ]] && continue
+
+  n=2
+  while [[ -e "$newname" ]] || [[ -e "${newname}${tmp_suffix}" ]]; do
+    newname="${newbase}_${n}${ext}"
+    ((n++))
+  done
+  mv -- "$f" "${newname}${tmp_suffix}" || { echo "✗ Failed to rename $f" >&2; exit 1; }
+  bashd_log "$(basename "$f")" "$newname"
+  ((renamed++))
+done
+
+for item in *"${tmp_suffix}"; do
+  [[ -e "$item" ]] || [[ -L "$item" ]] || continue
+  final="${item%${tmp_suffix}}"
+  mv -- "$item" "$final" || { echo "✗ Failed to finalize $item" >&2; exit 1; }
+done
+
+[[ $renamed -eq 0 ]] && { echo "No files needed sanitizing"; exit 0; }
+echo "✓ Sanitized $renamed file(s)"

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+usage() {
+  echo -e "Usage: pullfrom <remote_path> <local_path>\n  Pull files from a remote location."
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+# Check if correct number of arguments provided
+if [ "$#" -ne 2 ]; then
+  usage
+  exit 1
+fi
+
+REMOTE_PATH="$1"
+LOCAL_PATH="$2"
+REMOTE_HOST="HOST@NAME"
+
+# Pull file using scp
+scp -r "${REMOTE_HOST}:${REMOTE_PATH}" "$LOCAL_PATH"
+
+# Check if transfer was successful
+if [ $? -eq 0 ]; then
+  echo "✓ Successfully pulled from remote"
+else
+  echo "✗ Transfer failed"
+  exit 1
+fi

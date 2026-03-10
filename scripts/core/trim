@@ -1,0 +1,119 @@
+#!/bin/bash
+# Safely remove junk and empty structure: zero-byte files, .DS_Store, Thumbs.db, empty dirs.
+# trim [-r] [-n]  -r recursive, -n dry run (list only, no deletion).
+
+usage() {
+  printf 'Usage: trim [-r] [-n]\n  Remove empty dirs, zero-byte files, .DS_Store, Thumbs.db.\n  -r  recursive\n  -n  dry run (list only)\n' >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+RECURSE=false
+DRY_RUN=false
+while getopts "rnh" opt; do
+    case $opt in
+        r) RECURSE=true ;;
+        n) DRY_RUN=true ;;
+        h) usage; exit 0 ;;
+        *) usage; exit 1 ;;
+    esac
+done
+shift $((OPTIND-1))
+[[ $# -gt 0 ]] && { usage; exit 1; }
+
+to_remove=()
+if [[ "$RECURSE" == true ]]; then
+    while IFS= read -r -d '' f; do
+        [[ -n "$f" ]] && to_remove+=("$f")
+    done < <(find . -type f \( -size 0 -o -name '.DS_Store' -o -name 'Thumbs.db' \) -print0 2>/dev/null | sort -z)
+    while IFS= read -r -d '' d; do
+        [[ -n "$d" ]] && to_remove+=("$d")
+    done < <(find . -mindepth 1 -type d -empty -print0 2>/dev/null | sort -rz)
+else
+    for item in ./* ./.[!.]* ..?*; do
+        [[ -e "$item" ]] || continue
+        name=$(basename "$item")
+        [[ "$name" == "." || "$name" == ".." ]] && continue
+        if [[ -f "$item" ]]; then
+            if [[ "$name" == ".DS_Store" || "$name" == "Thumbs.db" ]]; then
+                to_remove+=("$item"); continue
+            fi
+            [[ -s "$item" ]] && continue
+            to_remove+=("$item")
+        elif [[ -d "$item" ]]; then
+            # Empty dir (direct child only)
+            shopt -s nullglob
+            contents=("$item"/* "$item"/.[!.]* "$item"/..?*)
+            shopt -u nullglob
+            found=
+            for c in "${contents[@]}"; do [[ -e "$c" ]] && { found=1; break; }; done
+            [[ -z "$found" ]] && to_remove+=("$item")
+        fi
+    done
+fi
+
+[[ ${#to_remove[@]} -eq 0 ]] && { echo "✓ Nothing to trim"; exit 0; }
+
+if $DRY_RUN; then
+    echo "Would trim ${#to_remove[@]} item(s):"
+    for i in "${!to_remove[@]}"; do
+        printf "  %d. %s\n" "$((i+1))" "${to_remove[$i]}"
+    done
+    exit 0
+fi
+
+echo "The following will be removed:"
+for i in "${!to_remove[@]}"; do
+    printf "  %d. %s\n" "$((i+1))" "${to_remove[$i]}"
+done
+echo ""
+read -r -p "Remove all? [y/N] Or enter numbers to exclude (e.g. 1 2 3): " ans
+
+# Parse reply: y/yes = remove all; n/no/empty = abort; otherwise treat as space-separated indices to exclude
+reply=$(echo "$ans" | tr -s '[:space:]' ' ' | sed 's/^ //;s/ $//')
+case "$reply" in
+    [yY]|[yY][eE][sS])
+        # Remove all; keep to_remove as is
+        ;;
+    "")
+        echo "Aborted."
+        exit 0
+        ;;
+    [nN]|[nN][oO])
+        echo "Aborted."
+        exit 0
+        ;;
+    *)
+        # Assume one or more numbers: exclude these 1-based indices from the list
+        exclude=()
+        for word in $reply; do
+            [[ "$word" =~ ^[0-9]+$ ]] && exclude+=("$word")
+        done
+        if [[ ${#exclude[@]} -gt 0 ]]; then
+            new_remove=()
+            for i in "${!to_remove[@]}"; do
+                n=$((i+1))
+                skip=0
+                for e in "${exclude[@]}"; do
+                    [[ "$e" -eq "$n" ]] && { skip=1; break; }
+                done
+                [[ $skip -eq 0 ]] && new_remove+=("${to_remove[$i]}")
+            done
+            to_remove=("${new_remove[@]}")
+            [[ ${#to_remove[@]} -eq 0 ]] && { echo "All items excluded. Nothing to trim."; exit 0; }
+            echo "Excluding selected; removing ${#to_remove[@]} item(s)."
+        else
+            echo "Aborted."
+            exit 0
+        fi
+        ;;
+esac
+
+for p in "${to_remove[@]}"; do
+    if [[ -d "$p" ]]; then
+        rmdir -- "$p" 2>/dev/null || true
+    else
+        rm -f -- "$p" 2>/dev/null || { echo "✗ Failed to remove $p" >&2; exit 1; }
+    fi
+done
+echo "✓ Trimmed ${#to_remove[@]} item(s)"

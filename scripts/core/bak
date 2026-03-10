@@ -1,0 +1,53 @@
+#!/bin/bash
+# Single-file backup: rename the file to name.ext.bak and create a copy as name.ext (so you keep an editable copy and a .bak).
+# Usage: bak <file> [file2] ...
+
+usage() {
+  echo "Usage: bak <file> [file2] ..." >&2
+  echo "  Renames file(s) to <name>.<ext>.bak and creates copies as originals (backup + working copy)" >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+[[ $# -eq 0 ]] && { usage; exit 1; }
+
+backup_one() {
+  local file="$1"
+
+  [[ ! -f "$file" ]] && { echo "✗ Not a file or not found: $file" >&2; return 1; }
+
+  local base dir bakname bakpath
+  base=$(basename "$file")
+  dir=$(dirname "$file")
+  [[ "$dir" == "." ]] && dir=""
+  bakname="${base}.bak"
+  bakpath="${dir:+$dir/}${bakname}"
+
+  [[ -e "$bakpath" ]] && { echo "✗ Backup already exists: $bakpath" >&2; return 1; }
+
+  if mv -- "$file" "$bakpath" && cp -a -- "$bakpath" "$file"; then
+    echo "✓ Backed up: $base → $bakname"
+    return 0
+  else
+    echo "✗ Failed: $base" >&2
+    return 1
+  fi
+}
+
+backed=0
+failed=0
+for file in "$@"; do
+  [[ "$file" == *.bak ]] && continue
+  [[ -d "$file" ]] && continue
+  if backup_one "$file"; then
+    ((backed++))
+  else
+    ((failed++))
+  fi
+done
+
+if [[ $# -gt 1 ]]; then
+  echo ""
+  msg="✓ Backed up $backed file(s)"
+  [[ $failed -gt 0 ]] && msg+=", $failed failed"
+  echo "$msg"
+fi

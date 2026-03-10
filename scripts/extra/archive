@@ -1,0 +1,144 @@
+#!/bin/bash
+
+REMOTE_HOST="HOST@NAME"
+ARCHIVE_BASE="/PATH/TO/DISK"
+ARCHIVE_DIR="$ARCHIVE_BASE"
+CRYPT_MOUNT="$ARCHIVE_BASE/Crypt_decrypted"
+
+usage() {
+  echo -e "Usage: archive [-w] [-i] [-v] [-k] [-c] [-p path]\n  Archive to remote/HDD."
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+# Parse arguments
+USE_CUSTOM_PATH=false
+CUSTOM_PATH=""
+SOURCE_PATH=""
+USE_CRYPT=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  -p | --path)
+    USE_CUSTOM_PATH=true
+    SOURCE_PATH="$2"
+    CUSTOM_PATH="$3"
+    shift 3
+    ;;
+  -w | --work)
+    ARCHIVE_DIR="$ARCHIVE_BASE/Work"
+    SOURCE_PATH="$2"
+    shift 2
+    ;;
+  -i | --image)
+    ARCHIVE_DIR="$ARCHIVE_BASE/Media/Images"
+    SOURCE_PATH="$2"
+    shift 2
+    ;;
+  -v | --video)
+    ARCHIVE_DIR="$ARCHIVE_BASE/Media/Videos"
+    SOURCE_PATH="$2"
+    shift 2
+    ;;
+  -e | --extra)
+    ARCHIVE_DIR="$ARCHIVE_BASE/Extra"
+    SOURCE_PATH="$2"
+    shift 2
+    ;;
+  -k | --key)
+    USE_CRYPT=true
+    ARCHIVE_DIR="$CRYPT_MOUNT/Keys"
+    SOURCE_PATH="$2"
+    shift 2
+    ;;
+  -c | --crypt)
+    USE_CRYPT=true
+    ARCHIVE_DIR="$CRYPT_MOUNT"
+    SOURCE_PATH="$2"
+    shift 2
+    ;;
+  *)
+    if [ -z "$SOURCE_PATH" ]; then
+      SOURCE_PATH="$1"
+    fi
+    shift
+    ;;
+  esac
+done
+
+# Check if arguments provided
+if [ -z "$SOURCE_PATH" ]; then
+  usage
+  exit 1
+fi
+
+# Use custom path if specified
+if [ "$USE_CUSTOM_PATH" = true ]; then
+  ARCHIVE_DIR="$CUSTOM_PATH"
+fi
+
+# Check if source exists
+if [ ! -e "$SOURCE_PATH" ]; then
+  echo "✗ Error: $SOURCE_PATH does not exist"
+  exit 1
+fi
+
+# If using crypt, check if mounted on remote
+if [ "$USE_CRYPT" = true ]; then
+  echo "Checking encrypted directory on desktop..."
+
+  # Check if already mounted
+  ssh "$REMOTE_HOST" "mountpoint -q '$CRYPT_MOUNT'"
+
+  if [ $? -ne 0 ]; then
+    echo "Encrypted directory not mounted. Mounting now..."
+    echo "You will be prompted for the encryption password:"
+
+    # Use ssh -t to allocate a pseudo-terminal for interactive password entry
+    ssh -t "$REMOTE_HOST" "cryptmount"
+
+    if [ $? -ne 0 ]; then
+      echo "✗ Failed to mount encrypted directory"
+      exit 1
+    fi
+  fi
+fi
+
+# Get the basename of the source
+BASENAME=$(basename "$SOURCE_PATH")
+
+# Generate timestamp for potential duplicate handling
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+echo "Archiving to desktop: $BASENAME"
+
+# Ensure remote directory exists
+ssh "$REMOTE_HOST" "mkdir -p '$ARCHIVE_DIR'"
+
+# Copy to desktop archive using scp
+scp -r "$SOURCE_PATH" "${REMOTE_HOST}:${ARCHIVE_DIR}/${BASENAME}"
+
+if [ $? -eq 0 ]; then
+  echo "✓ Successfully archived to desktop"
+else
+  echo "✗ Archive failed - checking if duplicate exists..."
+  # Try with timestamp if file exists
+  scp -r "$SOURCE_PATH" "${REMOTE_HOST}:${ARCHIVE_DIR}/${BASENAME}_${TIMESTAMP}"
+  if [ $? -eq 0 ]; then
+    echo "✓ Archived with timestamp: ${BASENAME}_${TIMESTAMP}"
+  else
+    echo "✗ Archive failed"
+    exit 1
+  fi
+fi
+
+# Unmount encrypted directory if we used it
+if [ "$USE_CRYPT" = true ]; then
+  echo "Unmounting encrypted directory..."
+  ssh "$REMOTE_HOST" "cryptumount"
+  if [ $? -eq 0 ]; then
+    echo "✓ Encrypted directory unmounted"
+  else
+    echo "⚠ Warning: Failed to unmount encrypted directory"
+  fi
+fi

@@ -1,0 +1,48 @@
+#!/bin/bash
+# Quick dir jumps: hop N = cd up N levels; hop name = nearest parent whose basename matches (case-insensitive).
+# Output: only the cd command to stdout so that hop() in bashd-init.sh can eval it (like crush).
+
+usage() {
+  echo "Usage: hop <n> | hop <name>" >&2
+  echo "  hop N    cd up N levels (e.g. hop 2 -> cd ../..)" >&2
+  echo "  hop name  cd to nearest parent whose basename matches name (case-insensitive)" >&2
+}
+
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+[[ $# -ne 1 ]] && { usage; exit 1; }
+arg="$1"
+
+# Numeric: go up N levels
+if [[ "$arg" =~ ^[0-9]+$ ]]; then
+  n=$((arg))
+  [[ $n -lt 1 ]] && {
+    echo "✗ N must be positive" >&2
+    exit 1
+  }
+  cwd=$(pwd)
+  for ((i = 0; i < n; i++)); do
+    parent=$(dirname "$cwd")
+    [[ "$cwd" == "/" ]] && {
+      echo "✗ Cannot go above filesystem root" >&2
+      exit 1
+    }
+    cwd="$parent"
+  done
+  printf 'cd %q\n' "$cwd"
+  exit 0
+fi
+
+# Name: find nearest parent whose basename matches (case-insensitive)
+cwd=$(pwd)
+want=$(echo "$arg" | tr '[:upper:]' '[:lower:]')
+while [[ -n "$cwd" ]] && [[ "$cwd" != "/" ]]; do
+  base=$(basename "$cwd")
+  base_lower=$(echo "$base" | tr '[:upper:]' '[:lower:]')
+  if [[ "$base_lower" == "$want" ]]; then
+    printf 'cd %q\n' "$cwd"
+    exit 0
+  fi
+  cwd=$(dirname "$cwd")
+done
+echo "✗ No parent directory named '$arg' found" >&2
+exit 1
