@@ -1,5 +1,5 @@
 # Changelog
-# Test
+##
 ## v2.0.0 — Project Overhaul
 
 This is a major restructure of the toolkit. If you were using Bashd before, read this before updating.
