@@ -1,7 +1,8 @@
 #!/bin/bash
 
 usage() {
-  echo -e "Usage: pushto <local_path> <remote_path>\n  Push files to a remote location."
+  echo "Usage: pushto <local_path> <remote_path>" >&2
+  echo "  Push files to REMOTE_HOST (see ~/.config/bashd/remote.conf)." >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
@@ -11,9 +12,11 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
+source "$(dirname "$(readlink -f "$0")")/../_bashd_remote"
+bashd_load_remote || exit 1
+
 LOCAL_PATH="$1"
 REMOTE_PATH="$2"
-REMOTE_HOST="HOST@NAME"
 
 scp -r "$LOCAL_PATH" "${REMOTE_HOST}:${REMOTE_PATH}"
 

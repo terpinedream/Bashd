@@ -1,0 +1,39 @@
+#!/bin/bash
+# Shared clipboard helpers. Source from scripts:
+#   source "$(dirname "$(readlink -f "$0")")/../_bashd_clip"
+
+bashd_clipboard_copy() {
+  if command -v wl-copy >/dev/null 2>&1; then
+    wl-copy
+  elif command -v xclip >/dev/null 2>&1; then
+    xclip -selection clipboard
+  elif command -v xsel >/dev/null 2>&1; then
+    xsel --clipboard --input
+  elif command -v pbcopy >/dev/null 2>&1; then
+    pbcopy
+  elif command -v clip.exe >/dev/null 2>&1; then
+    clip.exe
+  else
+    echo "✗ No clipboard tool found (tried: wl-copy, xclip, xsel, pbcopy, clip.exe)" >&2
+    echo "  Install one (e.g. wl-clipboard or xclip) and try again." >&2
+    return 1
+  fi
+}
+
+bashd_clipboard_paste() {
+  if command -v wl-paste >/dev/null 2>&1; then
+    wl-paste 2>/dev/null
+  elif command -v xclip >/dev/null 2>&1; then
+    xclip -selection clipboard -o 2>/dev/null
+  elif command -v xsel >/dev/null 2>&1; then
+    xsel --clipboard --output 2>/dev/null
+  elif command -v pbpaste >/dev/null 2>&1; then
+    pbpaste 2>/dev/null
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -Command Get-Clipboard 2>/dev/null
+  else
+    echo "✗ No clipboard tool found (tried: wl-paste, xclip, xsel, pbpaste, powershell.exe)" >&2
+    echo "  Install one (e.g. wl-clipboard or xclip) and try again." >&2
+    return 1
+  fi
+}

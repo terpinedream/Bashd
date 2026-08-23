@@ -189,13 +189,13 @@ search_file() {
 }
 
 usage() {
-  echo "qs — quickSearch"
-  echo ""
-  echo "  qs              List common dirs (1-${#DIRS[@]}), 0=cancel; then drill down. 0=done."
-  echo "  qs -s DIR       Fuzzy search directories by name; pick one to print path"
-  echo "  qs -f FILE      Search for file by name; pick one to open in \$EDITOR"
-  echo ""
-  echo "To navigate:  cd \$(qs)  — or source bashd-init.sh so running qs (or qs -s) cd's for you."
+  echo "qs — quickSearch" >&2
+  echo "" >&2
+  echo "  qs              List common dirs (1-${#DIRS[@]}), 0=cancel; then drill down. 0=done." >&2
+  echo "  qs -s DIR       Fuzzy search directories by name; pick one to print path" >&2
+  echo "  qs -f FILE      Search for file by name; pick one to open in \$EDITOR" >&2
+  echo "" >&2
+  echo "To navigate:  cd \$(qs)  — or source bashd-init.sh so running qs (or qs -s) cd's for you." >&2
 }
 
 main() {

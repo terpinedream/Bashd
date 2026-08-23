@@ -3,12 +3,13 @@
 # lower   No arguments. Only regular files, direct children of CWD.
 
 usage() {
-  printf 'Usage: lower\n  Sanitize filenames: lowercase, strip special chars, collapse underscores.\n' >&2
+  printf 'Usage: lower [file ...]\n  Sanitize filenames: lowercase, strip special chars, collapse underscores.\n  Optional file args; default: all loose files in CWD.\n' >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
 source "$(dirname "$(readlink -f "$0")")/../_bashd_log"
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
 
 sanitize() {
   local s="$1"
@@ -21,14 +22,8 @@ sanitize() {
   printf '%s' "$s"
 }
 
-files=()
-for item in ./* ./.[!.]* ..?*; do
-  [[ -e "$item" ]] || continue
-  [[ -f "$item" ]] || continue
-  name=$(basename "$item")
-  [[ "$name" == "." || "$name" == ".." ]] && continue
-  files+=("$item")
-done
+bashd_collect_loose_files "$@" || exit 1
+files=("${bashd_files[@]}")
 [[ ${#files[@]} -eq 0 ]] && { echo "No files to rename"; exit 0; }
 
 IFS=$'\n' read -r -d '' -a sorted < <(printf '%s\n' "${files[@]}" | sort) || true

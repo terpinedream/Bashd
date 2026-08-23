@@ -4,7 +4,8 @@
 # Usage: ld  (no args). Source bashd-init.sh so the shell records previous CWD and ld changes directory.
 
 usage() {
-  echo -e "Usage: ld\n  Return to the last-used directory (previous CWD)."
+  echo "Usage: ld" >&2
+  echo "  Return to the last-used directory (previous CWD)." >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }

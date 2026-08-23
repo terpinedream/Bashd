@@ -10,7 +10,6 @@ usage() {
   echo "  delim  Delimiter character (default _)" >&2
   echo "  -d and -n are mutually exclusive." >&2
   echo "  Files with fewer segments than N are skipped." >&2
-  exit 0
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
@@ -22,7 +21,7 @@ while getopts "dn:" opt; do
   case $opt in
     d) DATE_MODE=true ;;
     n) COUNT="$OPTARG"; HAS_N=true ;;
-    *) usage ;;
+    *) usage; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
@@ -31,7 +30,7 @@ $DATE_MODE && $HAS_N && { echo "✗ -d and -n are mutually exclusive" >&2; exit 
 $DATE_MODE && COUNT=3
 
 delim="_"
-[[ $# -gt 1 ]] && usage
+[[ $# -gt 1 ]] && { usage; exit 1; }
 [[ $# -eq 1 ]] && delim="$1"
 [[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || { echo "✗ -n must be a positive integer" >&2; exit 1; }
 
@@ -43,6 +42,7 @@ for item in ./* ./.[!.]* ..?*; do
   [[ -f "$item" ]] || continue
   name=$(basename "$item")
   [[ "$name" == "." || "$name" == ".." ]] && continue
+  [[ "$name" == .* ]] && continue
   files+=("$item")
 done
 [[ ${#files[@]} -eq 0 ]] && { echo "No files to rename"; exit 0; }

@@ -37,6 +37,7 @@ if [[ $# -gt 0 ]]; then
 else
   for f in "$TESTS_DIR"/test_*.sh; do
     [[ -f "$f" ]] || continue
+    [[ "$(basename "$f")" == "test_helpers.sh" ]] && continue
     run_test_file "$f"
   done
 fi

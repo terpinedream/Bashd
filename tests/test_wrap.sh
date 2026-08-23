@@ -6,10 +6,10 @@ echo "Testing wrap..."
 # ── wrap (no args) wraps into auto-named dir ──────────────────────────
 begin_test "wrap (no args) moves files into a subdirectory"
 setup_sandbox
+mkdir only
 touch a.txt b.txt c.txt
 "$BASHD" wrap >/dev/null 2>&1
-local_dirs=(*/); dir="${local_dirs[0]}"
-[[ -d "$dir" ]] && assert_exists "${dir}a.txt" && assert_exists "${dir}b.txt" && pass
+assert_exists "only/a.txt" && assert_exists "only/b.txt" && pass
 teardown_sandbox
 
 # ── wrap <dir> moves into existing dir ────────────────────────────────
@@ -37,6 +37,15 @@ mkdir subdir
 touch subdir/inner.txt
 "$BASHD" wrap -c -a bundle >/dev/null 2>&1
 assert_exists "bundle/a.txt" && assert_exists "bundle/subdir/inner.txt" && pass
+teardown_sandbox
+
+# ── wrap then uwrap round-trip ────────────────────────────────────────
+begin_test "wrap -c then uwrap restores original files"
+setup_sandbox
+touch a.txt b.txt
+"$BASHD" wrap -c mydir >/dev/null 2>&1
+"$BASHD" uwrap mydir >/dev/null 2>&1
+assert_exists "a.txt" && assert_exists "b.txt" && assert_not_exists "mydir" && pass
 teardown_sandbox
 
 print_summary

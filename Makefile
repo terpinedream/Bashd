@@ -37,6 +37,9 @@ install-core:
 	install -m 755 $(SCRIPTS_DIR)/bashd $(BASHD)
 	install -m 755 $(SCRIPTS_DIR)/bashd-init.sh $(INSTALL_DIR)/bashd-init.sh
 	install -m 644 $(SCRIPTS_DIR)/_bashd_log $(INSTALL_DIR)/_bashd_log
+	install -m 644 $(SCRIPTS_DIR)/_bashd_files $(INSTALL_DIR)/_bashd_files
+	install -m 644 $(SCRIPTS_DIR)/_bashd_clip $(INSTALL_DIR)/_bashd_clip
+	install -m 644 $(SCRIPTS_DIR)/_bashd_remote $(INSTALL_DIR)/_bashd_remote
 	@for f in $(CORE_DIR)/*; do install -m 755 "$$f" $(INSTALL_CORE)/; done
 	@for f in $(HELPERS_DIR)/*; do install -m 755 "$$f" $(INSTALL_HELP)/; done
 	@echo "Installed core + helpers."

@@ -8,7 +8,7 @@ begin_test "namechange renames files to template"
 setup_sandbox
 touch a.txt b.txt c.txt
 "$BASHD" namechange "file.txt" >/dev/null 2>&1
-assert_file_count 3 . && assert_name_matches "file" && pass
+assert_file_count 3 . && assert_name_matches '^[0-9]+_file\.txt$' && pass
 teardown_sandbox
 
 # ── namechange + undo ─────────────────────────────────────────────────

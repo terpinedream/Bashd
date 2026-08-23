@@ -1,12 +1,26 @@
 #!/bin/bash
 # Move all files from subdirectories (any depth) into CWD, prefixing each filename with its path.
-# flatten  - no args; a/b/file.txt -> a_b_file.txt; then remove empty dirs. Symlinks moved as-is.
+# flatten  - no args; a/b/file.txt -> a_b_file.txt; then remove empty dirs. Regular files only.
 
 usage() {
-  printf 'Usage: flatten\n  Move all files from subdirs into CWD, prefixing with path.\n' >&2
+  printf 'Usage: flatten [-n]\n  Move all files from subdirs into CWD, prefixing with path.\n  -n  dry run\n' >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
+DRY_RUN=false
+while getopts "nh" opt; do
+  case $opt in
+    n) DRY_RUN=true ;;
+    h) usage; exit 0 ;;
+    *) usage; exit 1 ;;
+  esac
+done
+shift $((OPTIND-1))
+[[ $# -gt 0 ]] && { usage; exit 1; }
 
 cwd=$(pwd)
 # Collect all regular files under subdirs (relative path from CWD)
@@ -39,12 +53,17 @@ for f in "${files[@]}"; do
         [[ -n "$ext" ]] && dest="${prefix}_${base_noext}_${n}.${ext}" || dest="${prefix}_${base_noext}_${n}"
         ((n++))
     done
+    if $DRY_RUN; then
+        echo "  would move $f -> $dest"
+        continue
+    fi
     if ! mv -- "$f" "$cwd/$dest"; then
         echo "✗ Failed to move $f" >&2
         exit 1
     fi
 done
 
+if ! $DRY_RUN; then
 # Remove empty directories (repeat until no change; depth-first so leaves go first)
 while true; do
     removed=0
@@ -54,5 +73,10 @@ while true; do
     done < <(find . -mindepth 1 -type d -print0 2>/dev/null | sort -rz)
     [[ $removed -eq 0 ]] && break
 done
+fi
 
-echo "✓ Flattened ${#files[@]} file(s) into CWD and removed empty directories"
+if $DRY_RUN; then
+    echo "Would flatten ${#files[@]} file(s) into CWD"
+else
+    echo "✓ Flattened ${#files[@]} file(s) into CWD and removed empty directories"
+fi

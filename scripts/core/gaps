@@ -8,13 +8,12 @@ usage() {
   echo "  delim  Delimiter character (default _)" >&2
   echo "  Re-indexes numbered files to fill gaps (e.g. 01,03,05 -> 01,02,03)." >&2
   echo "  Files without a numeric delimiter segment are skipped." >&2
-  exit 1
 }
 
-[[ "$1" == "-h" || "$1" == "--help" ]] && usage
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
 delim="_"
-[[ $# -gt 1 ]] && usage
+[[ $# -gt 1 ]] && { usage; exit 1; }
 [[ $# -eq 1 ]] && delim="$1"
 
 source "$(dirname "$(readlink -f "$0")")/../_bashd_log"
@@ -25,6 +24,7 @@ for item in ./* ./.[!.]* ..?*; do
   [[ -f "$item" ]] || continue
   name=$(basename "$item")
   [[ "$name" == "." || "$name" == ".." ]] && continue
+  [[ "$name" == .* ]] && continue
   files+=("$name")
 done
 [[ ${#files[@]} -eq 0 ]] && { echo "No files found"; exit 0; }

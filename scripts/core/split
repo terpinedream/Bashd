@@ -3,17 +3,25 @@
 # split <N>   Creates part_1/ ... part_N/ and distributes files round-robin.
 
 usage() {
-  echo "Usage: split <N>" >&2
+  echo "Usage: split [-n] <N>" >&2
   echo "  N = number of subdirectories to create (2+)." >&2
   echo "  Distributes loose files in CWD round-robin into part_1/ ... part_N/." >&2
-  exit 0
+  echo "  -n  dry run" >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-[[ $# -ne 1 ]] && usage
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
+DRY_RUN=false
+if [[ "${1:-}" == "-n" ]]; then
+  DRY_RUN=true
+  shift
+fi
+[[ $# -ne 1 ]] && { usage; exit 1; }
 N="$1"
-[[ "$N" =~ ^[0-9]+$ ]] || usage
+[[ "$N" =~ ^[0-9]+$ ]] || { usage; exit 1; }
 [[ "$N" -lt 2 ]] && { echo "✗ N must be at least 2" >&2; exit 1; }
 
 files=()
@@ -42,17 +50,27 @@ for (( i = 1; i <= N; i++ )); do
   fi
 done
 
+if ! $DRY_RUN; then
 for (( i = 1; i <= N; i++ )); do
   mkdir "part_${i}" || { echo "✗ Failed to create part_${i}" >&2; exit 1; }
 done
+fi
 
 moved=0
 for (( idx = 0; idx < ${#sorted[@]}; idx++ )); do
   bucket=$(( (idx % N) + 1 ))
-  mv -- "${sorted[idx]}" "part_${bucket}/" || { echo "✗ Failed to move ${sorted[idx]}" >&2; exit 1; }
-  ((moved++))
+  if $DRY_RUN; then
+    echo "  would move ${sorted[idx]} -> part_${bucket}/"
+  else
+    mv -- "${sorted[idx]}" "part_${bucket}/" || { echo "✗ Failed to move ${sorted[idx]}" >&2; exit 1; }
+  fi
+  ((moved++)) || true
 done
 
 per=$(( moved / N ))
 rem=$(( moved % N ))
-echo "✓ Split $moved file(s) into $N parts (~$per each${rem:+, $rem part(s) have $(( per + 1 ))})"
+if $DRY_RUN; then
+  echo "Would split $moved file(s) into $N parts (~$per each${rem:+, $rem part(s) have $(( per + 1 ))})"
+else
+  echo "✓ Split $moved file(s) into $N parts (~$per each${rem:+, $rem part(s) have $(( per + 1 ))})"
+fi

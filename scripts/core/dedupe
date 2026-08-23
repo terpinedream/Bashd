@@ -8,6 +8,9 @@ usage() {
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
 RECURSE=false
 while getopts "rh" opt; do
     case $opt in
@@ -30,7 +33,7 @@ fi
 
 cwd=$(pwd)
 if [[ "$RECURSE" == true ]]; then
-    find_args=(. -type f)
+    find_args=(. -type f -not -path './_dupes/*')
 else
     find_args=(. -maxdepth 1 -type f)
 fi

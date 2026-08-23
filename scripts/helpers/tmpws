@@ -71,4 +71,5 @@ fi
 printf 'export TMPWS_DIR=%q\n' "$dir"
 printf 'export TMPWS_ORIGIN=%q\n' "$(pwd)"
 printf 'cd %q\n' "$dir"
-printf 'trap '\''rm -rf "$TMPWS_DIR"'\'' EXIT\n'
+# Prefer bashd_on_exit from bashd-init.sh (also cleans mark/lastcmd). Fall back to a local trap.
+printf 'if ! declare -F bashd_on_exit >/dev/null 2>&1; then trap '\''rm -rf -- "${TMPWS_DIR:-}"'\'' EXIT; fi\n'

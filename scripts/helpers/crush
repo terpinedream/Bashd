@@ -4,7 +4,8 @@
 # Default (cd to parent): source bashd-init.sh in your shell config so 'crush' is the wrapper that evals the cd
 
 usage() {
-  echo -e "Usage: crush\n  Move CWD contents into parent directory and remove empty CWD."
+  echo "Usage: crush" >&2
+  echo "  Move CWD contents into parent directory and remove empty CWD." >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }

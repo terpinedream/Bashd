@@ -1,0 +1,22 @@
+#!/bin/bash
+# Load REMOTE_HOST / ARCHIVE_BASE from env or ~/.config/bashd/remote.conf
+# Source from extra scripts: source "$(dirname "$(readlink -f "$0")")/../_bashd_remote"
+
+bashd_load_remote() {
+  local conf="${XDG_CONFIG_HOME:-$HOME/.config}/bashd/remote.conf"
+  if [[ -f "$conf" ]]; then
+    # shellcheck source=/dev/null
+    source "$conf"
+  fi
+  [[ -n "${BASHD_REMOTE:-}" ]] && REMOTE_HOST="$BASHD_REMOTE"
+  [[ -n "${BASHD_ARCHIVE_BASE:-}" ]] && ARCHIVE_BASE="$BASHD_ARCHIVE_BASE"
+
+  if [[ -z "${REMOTE_HOST:-}" || "$REMOTE_HOST" == "HOST@NAME" ]]; then
+    echo "✗ REMOTE_HOST is not set. Create $conf with:" >&2
+    echo "    REMOTE_HOST=user@host" >&2
+    echo "    ARCHIVE_BASE=/path/to/archive   # optional, for archive" >&2
+    echo "  Or export BASHD_REMOTE=user@host" >&2
+    return 1
+  fi
+  return 0
+}

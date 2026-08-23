@@ -1,95 +1,156 @@
 #!/bin/bash
-# Unpack directories in CWD: move their contents up into CWD and remove the empty dirs.
-# uwrap                    -> unpack all directories in CWD
-# uwrap path/to/dir        -> unpack only that directory (if in CWD: move; if outside CWD: copy to CWD)
+# Unpack directories: move (or copy) their contents up into CWD and remove empty dirs.
+# uwrap                Unpack all directories in CWD (keep original names)
+# uwrap <dir>          Unpack that dir (move if inside CWD, copy if outside)
+# uwrap -p             Prefix each filename with the source directory name
+# Inverse of wrap / stick / split when used without -p.
 
 usage() {
-  printf 'Usage: uwrap [dir]\n  Unpack directories: uwrap = all in CWD; uwrap <dir> = specific dir.\n' >&2
+  echo "Usage: uwrap [-p] [-n] [dir]" >&2
+  echo "  uwrap              Unpack all directories in CWD" >&2
+  echo "  uwrap <dir>        Unpack a specific directory" >&2
+  echo "  uwrap -p [dir]     Prefix filenames with the source dir name" >&2
+  echo "  -n                 Dry run (list only)" >&2
+  echo "  Keeps original names; prefixes or adds _n only on collision (unless -p)." >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
+PREFIX=false
+DRY_RUN=false
+while getopts "pnh" opt; do
+  case $opt in
+    p) PREFIX=true ;;
+    n) DRY_RUN=true ;;
+    h) usage; exit 0 ;;
+    *) usage; exit 1 ;;
+  esac
+done
+shift $((OPTIND-1))
+
 cwd=$(pwd)
 cwd_real=$(realpath "$cwd" 2>/dev/null || echo "$cwd")
 
-unpack_one() {
-    local dir="$1"
-    local do_copy="${2:-false}"
-    local count=0
-    local dirbase
-    dirbase=$(basename "$dir")
-    [[ -d "$dir" ]] || return 1
-    for item in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
-        [[ -e "$item" ]] || continue
-        name=$(basename "$item")
-        [[ "$name" == "." || "$name" == ".." ]] && continue
-        # Use dirbase_name so multiple dirs with same filename don't overwrite (e.g. 1/_new.txt -> 1_new.txt)
-        base="$name"
-        ext=""
-        [[ "$base" == *.* ]] && { ext=".${base##*.}"; base="${base%.*}"; }
-        if [[ "$dirbase" == *_ ]] || [[ "$base" == _* ]]; then
-            dest="$cwd/${dirbase}${base}${ext}"
-        else
-            dest="$cwd/${dirbase}_${base}${ext}"
-        fi
-        n=2
-        while [[ -e "$dest" ]]; do
-            [[ -n "$ext" ]] && dest="$cwd/${dirbase}_${base}_${n}${ext}" || dest="$cwd/${dirbase}_${base}_${n}"
-            ((n++))
-        done
-        if [[ "$do_copy" == true ]]; then
-            cp -r -- "$item" "$dest" || { echo "✗ Failed to copy $item"; return 1; }
-        else
-            mv -- "$item" "$dest" || { echo "✗ Failed to move $item"; return 1; }
-        fi
-        ((count++))
-    done
-    if [[ "$do_copy" != true ]]; then
-        rmdir -- "$dir" 2>/dev/null || true
+inside_cwd() {
+  local target="$1"
+  [[ "$target" == "$cwd_real" ]] && return 0
+  [[ "$target" == "$cwd_real"/* ]] && return 0
+  return 1
+}
+
+# Dest path in CWD for an item named $name coming from dir basename $dirbase.
+dest_for() {
+  local dirbase="$1" name="$2"
+  local dest
+  if $PREFIX; then
+    local base="$name" ext=""
+    [[ "$base" == *.* && "$base" != .* ]] && { ext=".${base##*.}"; base="${base%.*}"; }
+    if [[ "$dirbase" == *_ ]] || [[ "$base" == _* ]]; then
+      dest="$cwd/${dirbase}${base}${ext}"
+    else
+      dest="$cwd/${dirbase}_${base}${ext}"
     fi
-    echo "$count"
+  else
+    dest="$cwd/$name"
+  fi
+  if [[ -e "$dest" ]]; then
+    local base="$name" ext=""
+    [[ "$base" == *.* && "$base" != .* ]] && { ext=".${base##*.}"; base="${base%.*}"; }
+    local n=2
+    while [[ -e "$dest" ]]; do
+      if $PREFIX; then
+        dest="$cwd/${dirbase}_${base}_${n}${ext}"
+      else
+        dest="$cwd/${base}_${n}${ext}"
+      fi
+      ((n++)) || true
+    done
+  fi
+  printf '%s' "$dest"
+}
+
+unpack_one() {
+  local dir="$1"
+  local do_copy="${2:-false}"
+  local count=0
+  local dirbase name dest
+  dirbase=$(basename "$dir")
+  [[ -d "$dir" ]] || return 1
+  for item in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; do
+    [[ -e "$item" ]] || continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    dest=$(dest_for "$dirbase" "$name")
+    if $DRY_RUN; then
+      echo "  would move $item -> $dest" >&2
+      ((count++)) || true
+      continue
+    fi
+    if [[ "$do_copy" == true ]]; then
+      cp -r -- "$item" "$dest" || { echo "✗ Failed to copy $item" >&2; return 1; }
+    else
+      mv -- "$item" "$dest" || { echo "✗ Failed to move $item" >&2; return 1; }
+    fi
+    ((count++)) || true
+  done
+  if [[ "$do_copy" != true ]] && ! $DRY_RUN; then
+    rmdir -- "$dir" 2>/dev/null || true
+  fi
+  echo "$count"
 }
 
 if [[ $# -eq 0 ]]; then
-    # Unpack all directories in CWD (collect list first so we don't iterate over changing dir)
-    dirs=()
-    for item in ./* ./.[!.]* ..?*; do
-        [[ -e "$item" ]] || continue
-        [[ -d "$item" ]] || continue
-        name=$(basename "$item")
-        [[ "$name" == "." || "$name" == ".." ]] && continue
-        dirs+=("$item")
-    done
-    count_total=0
-    for item in "${dirs[@]}"; do
-        [[ -d "$item" ]] || continue
-        n=$(unpack_one "$item" false)
-        count_total=$((count_total + n))
-    done
+  dirs=()
+  for item in ./* ./.[!.]* ..?*; do
+    [[ -e "$item" ]] || continue
+    [[ -d "$item" ]] || continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    dirs+=("$item")
+  done
+  count_total=0
+  for item in "${dirs[@]}"; do
+    [[ -d "$item" ]] || continue
+    n=$(unpack_one "$item" false)
+    count_total=$((count_total + n))
+  done
+  if $DRY_RUN; then
+    echo "Would unpack all directories ($count_total item(s))"
+  else
     echo "✓ Unpacked all directories ($count_total item(s) moved into CWD)"
-    exit 0
+  fi
+  exit 0
 fi
 
-# Unpack the specified directory (allow -- so paths like -my-dir work)
 [[ "$1" == "--" ]] && shift
+[[ $# -ne 1 ]] && { usage; exit 1; }
 target="$1"
 if [[ ! -d "$target" ]]; then
-    echo "✗ Not a directory: $target"
-    exit 1
+  echo "✗ Not a directory: $target" >&2
+  exit 1
 fi
 
 target_real=$(realpath "$target" 2>/dev/null || echo "$(cd "$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target")")
 if [[ "$target_real" == "$cwd_real" ]]; then
-    echo "✗ Cannot unpack current directory (.)"
-    exit 1
+  echo "✗ Cannot unpack current directory (.)" >&2
+  exit 1
 fi
-# If target is under CWD, we move. Otherwise we copy to CWD.
-if [[ "$target_real" == "$cwd_real"* ]]; then
-    # Target is inside CWD: unpack (move) and remove the dir
-    n=$(unpack_one "$target" false)
+
+if inside_cwd "$target_real"; then
+  n=$(unpack_one "$target" false)
+  if $DRY_RUN; then
+    echo "Would unpack $target ($n item(s))"
+  else
     echo "✓ Unpacked $target ($n item(s) moved into CWD)"
+  fi
 else
-    # Target is outside CWD: copy contents to CWD
-    n=$(unpack_one "$target" true)
+  n=$(unpack_one "$target" true)
+  if $DRY_RUN; then
+    echo "Would copy contents of $target ($n item(s))"
+  else
     echo "✓ Copied contents of $target to CWD ($n item(s))"
+  fi
 fi

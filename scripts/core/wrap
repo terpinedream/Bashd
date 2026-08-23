@@ -4,23 +4,30 @@
 # wrap <existing_dir>       Move loose files into that directory
 # wrap -c <new_name>        Create new dir, move files into it
 # wrap -c -a <new_name>     Create new dir, move files AND dirs into it
+# wrap -n                   Dry run
 
 usage() {
-    echo "Usage: wrap [dir]  |  wrap -c [-a] <new_name>" >&2
+    echo "Usage: wrap [-n] [dir]  |  wrap -c [-a] [-n] <new_name>" >&2
     echo "  wrap              Move loose files into the single subdir" >&2
     echo "  wrap <dir>        Move loose files into existing dir" >&2
     echo "  wrap -c <name>    Create dir and move files into it" >&2
     echo "  wrap -c -a <name> Create dir and move files + dirs into it" >&2
+    echo "  -n                Dry run (list only)" >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
 CREATE=false
 ALL=false
-while getopts "cah" opt; do
+DRY_RUN=false
+while getopts "cahn" opt; do
     case $opt in
         c) CREATE=true ;;
         a) ALL=true ;;
+        n) DRY_RUN=true ;;
         h) usage; exit 0 ;;
         *) usage; exit 1 ;;
     esac
@@ -29,12 +36,23 @@ shift $((OPTIND-1))
 
 $ALL && ! $CREATE && { echo "✗ -a requires -c" >&2; exit 1; }
 
+move_item() {
+    local src="$1" dest="$2"
+    if $DRY_RUN; then
+        echo "  would move $src -> $dest"
+        return 0
+    fi
+    mv -- "$src" "$dest" || { echo "✗ Failed to move $src" >&2; exit 1; }
+}
+
 if $CREATE; then
     [[ $# -ne 1 ]] && { usage; exit 1; }
     DIRNAME="$1"
 
     [[ -e "$DIRNAME" ]] && { echo "✗ Already exists: $DIRNAME" >&2; exit 1; }
-    mkdir -p "$DIRNAME" || { echo "✗ Failed to create $DIRNAME" >&2; exit 1; }
+    if ! $DRY_RUN; then
+        mkdir -p "$DIRNAME" || { echo "✗ Failed to create $DIRNAME" >&2; exit 1; }
+    fi
 
     count=0
     for item in ./* ./.[!.]* ..?*; do
@@ -45,14 +63,17 @@ if $CREATE; then
         if ! $ALL && [[ -d "$item" ]]; then
             continue
         fi
-        mv -- "$item" "$DIRNAME/" || { echo "✗ Failed to move $item" >&2; exit 1; }
-        ((count++))
+        move_item "$item" "$DIRNAME/"
+        ((count++)) || true
     done
-    echo "✓ Created $DIRNAME/ and moved $count item(s) into it"
+    if $DRY_RUN; then
+        echo "Would create $DIRNAME/ and move $count item(s) into it"
+    else
+        echo "✓ Created $DIRNAME/ and moved $count item(s) into it"
+    fi
     exit 0
 fi
 
-# No -c: move loose files into existing dir
 if [[ $# -eq 1 ]]; then
     target="$1"
     [[ ! -d "$target" ]] && { echo "✗ Not a directory: $target" >&2; exit 1; }
@@ -66,16 +87,19 @@ if [[ $# -eq 1 ]]; then
         real_item=$(realpath "$item" 2>/dev/null || echo "$item")
         real_target=$(realpath "$target" 2>/dev/null || echo "$target")
         [[ "$real_item" == "$real_target" ]] && continue
-        mv -- "$item" "$target/" || { echo "✗ Failed to move $item" >&2; exit 1; }
-        ((count++))
+        move_item "$item" "$target/"
+        ((count++)) || true
     done
-    echo "✓ Moved $count loose file(s) into $target"
+    if $DRY_RUN; then
+        echo "Would move $count loose file(s) into $target"
+    else
+        echo "✓ Moved $count loose file(s) into $target"
+    fi
     exit 0
 fi
 
 [[ $# -gt 0 ]] && { usage; exit 1; }
 
-# No args: find single subdirectory
 shopt -s nullglob
 dirs=(*/)
 shopt -u nullglob
@@ -90,7 +114,11 @@ for item in ./* ./.[!.]* ..?*; do
     [[ -d "$item" ]] && continue
     name=$(basename "$item")
     [[ "$name" == "." || "$name" == ".." ]] && continue
-    mv -- "$item" "$target" || { echo "✗ Failed to move $item" >&2; exit 1; }
-    ((count++))
+    move_item "$item" "$target"
+    ((count++)) || true
 done
-echo "✓ Moved $count loose file(s) into $target"
+if $DRY_RUN; then
+    echo "Would move $count loose file(s) into $target"
+else
+    echo "✓ Moved $count loose file(s) into $target"
+fi

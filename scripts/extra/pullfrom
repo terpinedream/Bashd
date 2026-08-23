@@ -1,25 +1,25 @@
 #!/bin/bash
 
 usage() {
-  echo -e "Usage: pullfrom <remote_path> <local_path>\n  Pull files from a remote location."
+  echo "Usage: pullfrom <remote_path> <local_path>" >&2
+  echo "  Pull files from REMOTE_HOST (see ~/.config/bashd/remote.conf)." >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-# Check if correct number of arguments provided
 if [ "$#" -ne 2 ]; then
   usage
   exit 1
 fi
 
+source "$(dirname "$(readlink -f "$0")")/../_bashd_remote"
+bashd_load_remote || exit 1
+
 REMOTE_PATH="$1"
 LOCAL_PATH="$2"
-REMOTE_HOST="HOST@NAME"
 
-# Pull file using scp
 scp -r "${REMOTE_HOST}:${REMOTE_PATH}" "$LOCAL_PATH"
 
-# Check if transfer was successful
 if [ $? -eq 0 ]; then
   echo "✓ Successfully pulled from remote"
 else

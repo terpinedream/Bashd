@@ -1,15 +1,18 @@
 #!/bin/bash
 
-REMOTE_HOST="HOST@NAME"
-ARCHIVE_BASE="/PATH/TO/DISK"
-ARCHIVE_DIR="$ARCHIVE_BASE"
-CRYPT_MOUNT="$ARCHIVE_BASE/Crypt_decrypted"
-
 usage() {
-  echo -e "Usage: archive [-w] [-i] [-v] [-k] [-c] [-p path]\n  Archive to remote/HDD."
+  echo "Usage: archive [-w|-i|-v|-e|-k|-c] <src> | archive -p <src> <dst>" >&2
+  echo "  Archive to remote/HDD. -w work, -i image, -v video, -e extra, -k keys, -c crypt." >&2
+  echo "  Host/paths: ~/.config/bashd/remote.conf (REMOTE_HOST, ARCHIVE_BASE)." >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+source "$(dirname "$(readlink -f "$0")")/../_bashd_remote"
+bashd_load_remote || exit 1
+ARCHIVE_BASE="${ARCHIVE_BASE:-/PATH/TO/DISK}"
+ARCHIVE_DIR="$ARCHIVE_BASE"
+CRYPT_MOUNT="$ARCHIVE_BASE/Crypt_decrypted"
 
 # Parse arguments
 USE_CUSTOM_PATH=false

@@ -42,7 +42,7 @@ I intend to find a safer approach to this -- ideally one that captures output pa
 
 ### Scripts That Move/Delete Files
 
-`crush`, `flatten`, `wrap`, `uwrap`, `trim`, `qc`, and the rename scripts all modify the filesystem. They include safety measures (confirmation prompts, path guards against running in `/` or `$HOME`, dry-run flags), but they are not bulletproof. Always test on a scratch directory first -- `tmpws -c` exists for exactly this purpose.
+`crush`, `flatten`, `wrap`, `uwrap`, `trim`, `qc`, and the rename scripts all modify the filesystem. `crush` refuses to run in `/` or `$HOME`. `trim` and `qc` confirm before deleting; `trim` also has `-n` for dry run. Rename operations support `undo`. Organization movers (`wrap`, `nest`, `byext`, …) do not yet prompt. Always test on a scratch directory first -- `tmpws -c` exists for exactly this purpose.
 
 ### bashd-init.sh
 
@@ -52,7 +52,7 @@ Sourcing `bashd-init.sh` modifies your shell environment: it appends to `PROMPT_
 
 **Testing.** The automated test suite covers the rename pipeline and organization scripts (65+ assertions across 17 test files), but helpers, extras, and interactive scripts aren't tested yet. Expanding coverage to navigation scripts and edge cases would increase confidence further.
 
-**Installation.** The Makefile provides `install-core`, `install-extra`, `install-all`, and `uninstall` targets. Packaging for AUR/Homebrew/Nix would lower the barrier further. The AUR package hasn't been updated in awhile, but will be once the project is a bit more polished.
+**Installation.** The Makefile provides `install-core`, `install-extra`, `install-all`, and `uninstall` targets. The AUR package (the `aur` branch) is a parallel Arch-flavored install of the same scripts (profile.d, `/usr/share/bashd`), not a second codebase.
 
 **Overlap with existing tools.** Some scripts cover ground already served by established tools (`zoxide` for navigation, Perl `rename` for batch renaming, `fdupes` for deduplication, `ncdu`/`dust` for disk usage). Bashd's value isn't that these scripts are better than dedicated alternatives in isolation -- it's that they're a single, consistent, dependency-free set that work together. But I recognize the overlap exists, and users who already have those tools installed may find parts of the toolkit redundant. The new project structure aims to address this exact issue by organizing scripts into categories.
 

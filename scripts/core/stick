@@ -3,37 +3,44 @@
 # stick [-i] [-w] <dir_name>  -i case-insensitive, -w whole-word only. Default: substring match.
 
 usage() {
-    echo "Usage: stick [-i] [-w] <dir_name>"
-    echo "  Create dir_name/ and move items whose name contains dir_name into it."
-    echo "  -i  Case-insensitive match"
-    echo "  -w  Whole-word only (bounded by non-alphanumeric)"
-    exit 0
+    echo "Usage: stick [-i] [-w] [-n] <dir_name>" >&2
+    echo "  Create dir_name/ and move items whose name contains dir_name into it." >&2
+    echo "  -i  Case-insensitive match" >&2
+    echo "  -w  Whole-word only (bounded by non-alphanumeric)" >&2
+    echo "  -n  Dry run" >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
 CASE_INSENSITIVE=false
 WHOLE_WORD=false
+DRY_RUN=false
 DIRNAME=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -i) CASE_INSENSITIVE=true; shift ;;
         -w) WHOLE_WORD=true; shift ;;
+        -n) DRY_RUN=true; shift ;;
         --) shift; DIRNAME="$1"; shift; break ;;
-        -*) echo "Unknown option: $1" >&2; usage ;;
+        -*) echo "Unknown option: $1" >&2; usage; exit 1 ;;
         *)  DIRNAME="$1"; shift ;;
     esac
 done
 
-[[ -z "$DIRNAME" ]] && usage
+[[ -z "$DIRNAME" ]] && { usage; exit 1; }
 
 if [[ -e "$DIRNAME" ]] && [[ ! -d "$DIRNAME" ]]; then
     echo "✗ Not a directory (file exists): $DIRNAME" >&2
     exit 1
 fi
 
-mkdir -p "$DIRNAME" || { echo "✗ Failed to create $DIRNAME" >&2; exit 1; }
+if ! $DRY_RUN; then
+    mkdir -p "$DIRNAME" || { echo "✗ Failed to create $DIRNAME" >&2; exit 1; }
+fi
 
 # Build pattern for matching: substring or whole-word
 needle="$DIRNAME"
@@ -63,12 +70,20 @@ for item in ./* ./.[!.]* ..?*; do
     [[ "$name" == "." || "$name" == ".." ]] && continue
     [[ "$name" == "$DIRNAME" ]] && continue
     if matches "$name"; then
-        if ! mv -- "$item" "$DIRNAME/"; then
-            echo "✗ Failed to move $item" >&2
-            exit 1
+        if $DRY_RUN; then
+            echo "  would move $item -> $DIRNAME/"
+        else
+            if ! mv -- "$item" "$DIRNAME/"; then
+                echo "✗ Failed to move $item" >&2
+                exit 1
+            fi
         fi
-        ((count++))
+        ((count++)) || true
     fi
 done
 
-echo "✓ Created $DIRNAME/ and moved $count item(s) into it"
+if $DRY_RUN; then
+    echo "Would create $DIRNAME/ and move $count item(s) into it"
+else
+    echo "✓ Created $DIRNAME/ and moved $count item(s) into it"
+fi

@@ -32,25 +32,9 @@ if [[ "$MODE" == "create" && -e "$file" ]]; then
   exit 1
 fi
 
-clipboard_paste() {
-  if command -v wl-paste >/dev/null 2>&1; then
-    wl-paste 2>/dev/null
-  elif command -v xclip >/dev/null 2>&1; then
-    xclip -selection clipboard -o 2>/dev/null
-  elif command -v xsel >/dev/null 2>&1; then
-    xsel --clipboard --output 2>/dev/null
-  elif command -v pbpaste >/dev/null 2>&1; then
-    pbpaste 2>/dev/null
-  elif command -v powershell.exe >/dev/null 2>&1; then
-    powershell.exe -Command Get-Clipboard 2>/dev/null
-  else
-    echo "✗ No clipboard tool found (tried: wl-paste, xclip, xsel, pbpaste, powershell.exe)" >&2
-    echo "  Install one (e.g. wl-clipboard or xclip) and try again." >&2
-    exit 1
-  fi
-}
+source "$(dirname "$(readlink -f "$0")")/../_bashd_clip"
 
-content=$(clipboard_paste)
+content=$(bashd_clipboard_paste) || exit 1
 [[ -z "$content" ]] && { echo "✗ Clipboard is empty" >&2; exit 1; }
 
 if [[ "$MODE" == "append" ]]; then

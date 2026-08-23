@@ -34,9 +34,10 @@ shift $((OPTIND-1))
 
 if $DIRS; then
   if $RECURSE; then
-    du -ah --max-depth=99 . 2>/dev/null | grep -E '^\S+\s+\./' | \
-      awk '$2 != "./" && $2 ~ /\/$/ || system("test -d " $2)' | \
-      sort -rh | head -n "$COUNT"
+    du -h --max-depth=99 . 2>/dev/null | awk -F'\t' 'BEGIN{OFS="\t"} $2 != "." {print}' | \
+      sort -rh | head -n "$COUNT" | while IFS=$'\t' read -r size path; do
+        printf '  %8s  %s\n' "$size" "$path"
+      done
   else
     results=$(du -sh ./*/ 2>/dev/null | sort -rh | head -n "$COUNT")
     if [[ -z "$results" ]]; then

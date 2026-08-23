@@ -5,12 +5,11 @@
 usage() {
   echo "Usage: bring <path>" >&2
   echo "  Copies <path> (file or directory) into the current directory" >&2
-  exit 0
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-[[ $# -ne 1 ]] && usage
+[[ $# -ne 1 ]] && { usage; exit 1; }
 src="$1"
 
 [[ ! -e "$src" ]] && { echo "✗ No such file or directory: $src" >&2; exit 1; }

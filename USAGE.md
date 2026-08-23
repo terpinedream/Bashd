@@ -116,6 +116,7 @@ wrap                        Move loose files into the single subdir in CWD
 wrap <dir>                  Move loose files into the specified directory
 wrap -c <name>              Create new dir, move files into it
 wrap -c -a <name>           Create new dir, move files AND directories into it
+wrap -n                     Dry run (list only; combinable with other flags)
 ```
 
 **Example -- into existing subdir (no args):**
@@ -146,12 +147,15 @@ Use `-c -a` to also move subdirectories (not just files).
 
 ### uwrap
 
-Unpack directories -- the reverse of wrap.
+Unpack directories -- the reverse of wrap (and of stick / split). Files keep their original names.
 
 ```
 uwrap                 Unpack all subdirectories into CWD
 uwrap <path>          Unpack one directory (move if in CWD, copy if outside)
+uwrap -p [path]       Prefix each filename with the source directory name
 ```
+
+On name collisions, a `_n` suffix is added (e.g. `file.txt`, `file_2.txt`). Use `-p` to always prefix, matching the old prefix-everything behavior.
 
 **Example:**
 
@@ -161,6 +165,14 @@ project/
 $ uwrap
 $ ls
 report.pdf  notes.txt  data.csv
+```
+
+**Round-trips:**
+
+```
+wrap photos → uwrap photos     # files come back with original names
+stick foo   → uwrap foo
+split 3     → uwrap            # unpacks part_* with original names
 ```
 
 ---
@@ -205,7 +217,7 @@ $ ls
 doc/  photo/  notes.txt
 ```
 
-Files without the delimiter (`notes.txt`) are left in place. Works with `flatten` as a round-trip.
+Files without the delimiter (`notes.txt`) are left in place. Inner files keep the rest of the name (`photo/beach.jpg`). Works with `flatten` as a round-trip.
 
 ---
 
@@ -254,6 +266,8 @@ $ ls
 vacation/  work_report.pdf
 ```
 
+Reverse with `uwrap vacation` to move the files back with original names.
+
 ---
 
 ### pull
@@ -276,7 +290,7 @@ app/  config.json
 
 ### bring
 
-Copy a file or directory into CWD. The opposite of `pull`.
+Copy a file or directory into CWD. Complements `pull` (which **moves** one item to the parent). `bring` always copies; it does not move.
 
 ```
 bring <path>
@@ -374,7 +388,7 @@ $ ls part_3/
 c.txt  f.txt
 ```
 
-Useful for batching large directories (e.g., uploading 500 photos in chunks).
+Useful for batching large directories (e.g., uploading 500 photos in chunks). Reverse with `uwrap` to recombine with original names.
 
 ---
 
@@ -411,9 +425,9 @@ Add prefixes to filenames. Flags are combinable.
 
 ```
 pfx -d                Prepend date (YYYY_MM_DD_filename.ext)
-pfx -p                Append parent directory name
-pfx -i                Append incremental index (001, 002, ...)
-pfx -d -i             Combine: date prefix + index suffix
+pfx -p                Prepend parent directory name
+pfx -i                Prepend incremental index (001, 002, ...)
+pfx -d *.jpg          Only the given files (default: all loose files in CWD)
 ```
 
 **Example:**
@@ -424,7 +438,7 @@ photo.jpg  report.pdf
 $ pfx -d -i
 ✓ Prefixed 2 file(s)
 $ ls
-2026_03_04_photo_001.jpg  2026_03_04_report_002.pdf
+2026_03_04_001_photo.jpg  2026_03_04_002_report.pdf
 ```
 
 ---
@@ -800,6 +814,7 @@ Create a temporary workspace that auto-deletes when your shell exits.
 ```
 tmpws                 Create empty temp dir and cd into it
 tmpws -c              Copy CWD contents into the temp dir first
+tmpws -r              Leave the temp workspace and return to the original directory
 ```
 
 **Example:** Experiment with files safely:
@@ -901,13 +916,16 @@ Duplicate consecutive marks are ignored (marking the same directory twice in a r
 
 ### clip
 
-Copy a file's contents to the clipboard.
+Copy a file's contents — or stdin — to the clipboard.
 
 ```
-clip <filename>
+clip <filename>       Copy file contents
+clip                  Copy stdin when piped (ls | clip)
 ```
 
 Auto-detects clipboard tool: `wl-copy`, `xclip`, `xsel`, `pbcopy`, or `clip.exe`.
+
+Prefer `ls | clip` over `cpt` when you can pipe; `cpt` re-runs the last command.
 
 ---
 
@@ -1077,7 +1095,7 @@ Restore or clean up `.bak` files -- the reverse of `bak`. Smart about existing o
 
 - If the original **doesn't exist**: restores the `.bak` to its original name
 - If the original **exists and is identical**: removes the `.bak` (redundant backup)
-- If the original **exists and differs**: prompts you to choose `-k` or `-r`
+- If the original **exists and differs**: errors and tells you to re-run with `-k` or `-r` (no interactive prompt)
 
 ```
 ubak                  Process all .bak files in CWD
@@ -1149,12 +1167,13 @@ Archive files to a remote host or external drive.
 archive -w            Work files
 archive -i            Images
 archive -v            Video
+archive -e            Extra
 archive -k            Keys
 archive -c            Encrypted volume
 archive -p <src> <dst>  Custom source and destination paths
 ```
 
-Requires editing `REMOTE_HOST` and `ARCHIVE_BASE` in the script to match your setup.
+Requires `REMOTE_HOST` (and for archive, `ARCHIVE_BASE`) in `~/.config/bashd/remote.conf`, or `BASHD_REMOTE` / `BASHD_ARCHIVE_BASE` in the environment. Each flag takes a source path, e.g. `archive -w ~/projects/app`.
 
 ---
 
@@ -1167,7 +1186,7 @@ pullfrom <remote_path> <local_path>
 pushto <local_path> <remote_path>
 ```
 
-Requires editing `REMOTE_HOST` in each script.
+Requires `REMOTE_HOST` in `~/.config/bashd/remote.conf` (or `BASHD_REMOTE`).
 
 ---
 
@@ -1186,7 +1205,7 @@ Config in `~/.config/bashd/dotsync.conf`:
 
 ```
 REPO=/path/to/dotfiles
-PATHS=(~/.bashrc ~/.config/nvim)   # optional; defaults to all files in repo
+PATHS=(.bashrc .config/nvim)   # optional; defaults to all files in repo
 ```
 
 ---
@@ -1337,6 +1356,7 @@ lower → undo              Revert if something looks wrong
 ```
 split 4                   Divide into part_1/ ... part_4/
 # process each part independently
+uwrap                     Recombine with original names
 ```
 
 **Clipboard workflow:**

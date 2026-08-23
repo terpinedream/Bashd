@@ -1,0 +1,46 @@
+#!/bin/bash
+# Shared file-iteration and safety helpers. Source from scripts:
+#   source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+
+# Refuse to run bulk operations in / or $HOME. Returns 1 on refuse.
+bashd_refuse_home_root() {
+  local here
+  here=$(pwd)
+  if [[ "$here" == "/" ]]; then
+    echo "✗ Refusing to run at root /" >&2
+    return 1
+  fi
+  if [[ -n "${HOME:-}" && "$here" == "$HOME" ]]; then
+    echo "✗ Refusing to run in home directory" >&2
+    return 1
+  fi
+  return 0
+}
+
+# Fill bashd_files with loose regular files in CWD, or with the given paths.
+# Skips leading-dot names. Returns 1 if an explicit path is not a regular file.
+bashd_collect_loose_files() {
+  bashd_files=()
+  local item name
+  if [[ $# -gt 0 ]]; then
+    for item in "$@"; do
+      if [[ ! -f "$item" ]]; then
+        echo "✗ Not a regular file: $item" >&2
+        return 1
+      fi
+      name=$(basename "$item")
+      [[ "$name" == .* ]] && continue
+      bashd_files+=("$item")
+    done
+    return 0
+  fi
+  for item in ./* ./.[!.]* ..?*; do
+    [[ -e "$item" ]] || continue
+    [[ -f "$item" ]] || continue
+    name=$(basename "$item")
+    [[ "$name" == "." || "$name" == ".." ]] && continue
+    [[ "$name" == .* ]] && continue
+    bashd_files+=("$item")
+  done
+  return 0
+}

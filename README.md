@@ -83,7 +83,7 @@ If the config file doesn't exist, all core + helper commands get aliases by defa
 | **namechange** | Mass rename: `namechange "file.txt"` -> 1_file.txt, 2_file.txt, ... |
 | **undo**       | Reverse last rename (pfx, sfx, rmpfx, rmsfx, recase, gaps, lower, namechange) |
 | **wrap**       | Move files into dir: `wrap`, `wrap <dir>`, `wrap -c <name>`, `wrap -c -a <name>` |
-| **uwrap**      | Unpack directories into CWD |
+| **uwrap**      | Unpack dirs into CWD (keep names; `-p` to prefix) |
 | **nest**       | Split filenames at delimiter into subdirs: `prefix_rest` -> `prefix/rest` |
 | **flatten**    | Move subdir files to CWD with path prefix; remove empty dirs |
 | **stick**      | Create dir, move matching files: `stick [-i] [-w] <name>` |
@@ -101,7 +101,7 @@ If the config file doesn't exist, all core + helper commands get aliases by defa
 | **cpath**      | Copy CWD or file path to clipboard |
 | **cpt**        | Copy last command output to clipboard. `-y` skip confirm |
 | **sized**      | Show largest files/dirs: `-d` dirs, `-r` recurse, `-n N` |
-| **bring**      | Copy file or directory into CWD |
+| **bring**      | Copy file or dir into CWD (pull moves to parent) |
 | **pull**       | Move one file/dir to parent directory |
 
 ### Helpers (cd-requiring, need bashd-init.sh)
@@ -141,19 +141,32 @@ Bashd/
     bashd            # dispatcher (single entry point)
     bashd-init.sh    # shell init (aliases, cd-wrappers, prompt hooks)
     _bashd_log       # shared rename logging library
+    _bashd_files     # loose-file collection + HOME/root guards
+    _bashd_clip      # clipboard copy/paste
+    _bashd_remote    # REMOTE_HOST from ~/.config/bashd/remote.conf
     core/            # 30 core scripts (rename, organize, clipboard, cleanup)
     helpers/         # 9 cd-requiring shell helpers
     extra/           # 10 niche/system utilities
   tests/
     run_tests.sh     # test runner
     test_helpers.sh  # assertion functions
-    test_*.sh        # 17 test files (65+ assertions)
+    test_*.sh        # test files
   Makefile           # install/uninstall/test targets
 ```
 
 ## Installation
 
-### With Make (recommended)
+### Install from AUR (Arch Linux)
+
+The AUR package is a parallel Arch-flavored install of the same scripts (`yay -S bashd`). Packaging lives on the [`aur`](https://github.com/terpinedream/Bashd/tree/aur) branch (`PKGBUILD`, `.SRCINFO`), not on main. It uses `/usr/share/bashd` and `/etc/profile.d`, not `make install`.
+
+For login shells, `bashd-init.sh` is sourced automatically. For other interactive shells, add:
+
+```bash
+[ -f /usr/share/bashd/bashd-init.sh ] && . /usr/share/bashd/bashd-init.sh
+```
+
+### With Make (recommended on non-Arch)
 
 ```bash
 # Core + helpers only (most users)

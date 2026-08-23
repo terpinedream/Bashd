@@ -24,27 +24,7 @@ while getopts "yh" opt; do
     esac
 done
 
-get_clipboard_cmd() {
-    if command -v wl-copy >/dev/null 2>&1; then
-        echo "wl-copy"
-    elif command -v xclip >/dev/null 2>&1; then
-        echo "xclip -selection clipboard"
-    elif command -v xsel >/dev/null 2>&1; then
-        echo "xsel --clipboard --input"
-    elif command -v pbcopy >/dev/null 2>&1; then
-        echo "pbcopy"
-    elif command -v clip.exe >/dev/null 2>&1; then
-        echo "clip.exe"
-    else
-        echo ""
-    fi
-}
-
-clip_cmd=$(get_clipboard_cmd)
-[[ -z "$clip_cmd" ]] && {
-    echo "✗ No clipboard tool found (tried: wl-copy, xclip, xsel, pbcopy, clip.exe)" >&2
-    exit 1
-}
+source "$(dirname "$(readlink -f "$0")")/../_bashd_clip"
 
 cmd_file="${BASHD_LAST_CMD_FILE:-/tmp/bashd_lastcmd_$PPID}"
 
@@ -69,6 +49,6 @@ if ! $SKIP_CONFIRM; then
 fi
 
 output=$(eval "$last_cmd" 2>&1)
-printf '%s' "$output" | eval "$clip_cmd"
+printf '%s' "$output" | bashd_clipboard_copy || exit 1
 lines=$(printf '%s\n' "$output" | wc -l)
 echo "✓ Copied output ($lines line(s)) to clipboard"

@@ -3,11 +3,19 @@
 # nest [delim]  - default delimiter _. Files with no delimiter stay in CWD.
 
 usage() {
-  printf 'Usage: nest [delimiter]\n  Create subdirs from filename prefix: prefix_rest -> prefix/rest.\n' >&2
+  printf 'Usage: nest [-n] [delimiter]\n  Create subdirs from filename prefix: prefix_rest -> prefix/rest.\n  -n  dry run\n' >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
+DRY_RUN=false
+if [[ "${1:-}" == "-n" ]]; then
+  DRY_RUN=true
+  shift
+fi
 delim="_"
 [[ $# -gt 0 ]] && delim="$1"
 
@@ -23,10 +31,9 @@ for item in ./* ./.[!.]* ..?*; do
     # Strip trailing hyphen or underscore from directory name (e.g. help- -> help, my_dir_ -> my_dir)
     prefix="${prefix%-}"
     prefix="${prefix%_}"
-    # Keep delimiter in rest so the full filename is preserved (e.g. help-1.txt split on "1" -> help/1.txt)
-    rest="${delim}${name#*"$delim"}"
+    # Rest is the filename inside the new dir (flatten re-joins with _).
+    rest="${name#*"$delim"}"
     [[ -z "$prefix" ]] && continue
-    mkdir -p "$prefix" || { echo "✗ Failed to create $prefix" >&2; exit 1; }
     dest="$prefix/$rest"
     n=2
     while [[ -e "$dest" ]]; do
@@ -35,12 +42,21 @@ for item in ./* ./.[!.]* ..?*; do
         [[ -n "$ext" ]] && rest_noext="${rest%.*}" || rest_noext="$rest"
         [[ -n "$ext" ]] && rest_new="${rest_noext}_${n}.${ext}" || rest_new="${rest_noext}_${n}"
         dest="$prefix/$rest_new"
-        ((n++))
+        ((n++)) || true
     done
+    if $DRY_RUN; then
+        echo "  would move $item -> $dest"
+        continue
+    fi
+    mkdir -p "$prefix" || { echo "✗ Failed to create $prefix" >&2; exit 1; }
     if ! mv -- "$item" "$dest"; then
         echo "✗ Failed to move $item" >&2
         exit 1
     fi
 done
 
-echo "✓ Nested files by first '$delim' into subdirs (one level)"
+if $DRY_RUN; then
+    echo "Would nest files by first '$delim' into subdirs"
+else
+    echo "✓ Nested files by first '$delim' into subdirs (one level)"
+fi

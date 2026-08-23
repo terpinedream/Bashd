@@ -1,5 +1,46 @@
 # Changelog
 
+## v2.0.1 — Fix and harden existing scripts
+
+Same 49 commands, no new tools. This release makes inverse pairs, docs, and safety match the code.
+
+### Breaking changes
+
+- **`uwrap` keeps original names.** `photos/IMG_001.jpg` unpacks as `IMG_001.jpg`, not `photos_IMG_001.jpg`. Use `uwrap -p` for the old prefix-everything behavior. `wrap` / `stick` / `split` now round-trip through `uwrap`.
+- **`nest` no longer writes a leading delimiter on the inner name.** `photo_beach.jpg` becomes `photo/beach.jpg`, not `photo/_beach.jpg`. `flatten` still joins with `_`.
+- **`archive` / `pullfrom` / `pushto` no longer hardcode a remote host.** Set `REMOTE_HOST` (and `ARCHIVE_BASE` for archive) in `~/.config/bashd/remote.conf`, or `BASHD_REMOTE` / `BASHD_ARCHIVE_BASE` in the environment.
+
+### Behavior
+
+- **Dry-run (`-n`)** on `wrap`, `uwrap`, `nest`, `flatten`, `stick`, `split`, `byext`, `bydate`.
+- **HOME/root guards** on bulk movers and `qc` (same refusal as `crush`).
+- **Optional file args** on `pfx` / `sfx` / `recase` / `lower` (`pfx -d *.jpg`); default is still all loose files.
+- **`clip` reads stdin** when there is no filename and stdin is a pipe (`ls | clip`). Prefer that over `cpt` when you already have the output.
+- **Rename family skips leading-dot files** (`.bashrc`). `.tar.gz` is still split on the last suffix.
+- **Shared libraries:** `_bashd_files` (loose-file iteration, HOME/root), `_bashd_clip` (clipboard copy/paste), `_bashd_remote` (remote extras config).
+- **Dispatcher** finds scripts via `BASHD_ROOT`, then `core/` beside itself, then `/usr/share/bashd/core` (AUR layout). `bashd alias` emits init-matching wrappers for `bm` / `mark` / `tmpws` / `qs`.
+- **AUR packaging** lives on the `aur` branch (`PKGBUILD`, `.SRCINFO`), not on main. Arch install uses `/usr/share/bashd`, `profile.d`, PATH wrappers, and `prefix`/`bfold`/`cram`/`ufold` shims. It is not `make install`.
+
+### Bug fixes
+
+- `uwrap` path-prefix check treated `/home/u/proj-backup` as inside `/home/u/proj`.
+- `--help` exits 0 and invalid usage exits 1 (`qc`, `gaps`, `stick`, `clip`, `byext`, `split`, `pfx`, and others).
+- `tmpws` no longer overwrites the init EXIT trap (mark/lastcmd cleanup).
+- CD wrappers: `crush` / `ld` pass `"$@"`; `qs --help` is not swallowed. Helper help stays on stderr.
+- `bydate` uses GNU `date -r` instead of Perl.
+- `pull` refuses destination collisions like `bring`.
+- `dedupe -r` skips `_dupes/` when hashing.
+- `sized -d -r` no longer breaks on directory names with spaces.
+- `recase` rejects multiple flags (docs already said exactly one).
+- `pfx` / `sfx` collision-check pending temp names (same as `rmpfx` / `rmsfx`).
+- `clipd` preserves trailing newlines.
+- Errors from `pull`, `uwrap`, `namechange` go to stderr.
+- Docs match code for `namechange` (`1_file.txt`), `pfx -d -i` / `-p`/`-i` prepend, `ubak` (no prompt), bring vs pull, `dotsync` PATHS, `archive -e`, `tmpws -r`.
+
+### Tests
+
+- 18 test files (was 17). Coverage now includes wrap → uwrap names, nest inner names, nest → flatten, `--help` exit 0, pull collision, recase exclusive flags, bydate without Perl, `bring`, `byext`, wrap `-n`, and `pfx` file args.
+
 ## v2.0.0 — Project Overhaul
 
 This is a major restructure of the toolkit. If you were using Bashd before, read this before updating.

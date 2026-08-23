@@ -28,16 +28,21 @@ elif [[ -n "${ZSH_VERSION:-}" ]]; then
   precmd_functions+=(bashd_save_lastdir bashd_save_lastcmd)
 fi
 
-# ── Session files (mark trail, lastcmd) ──────────────────────────────
+# ── Session files (mark trail, lastcmd, tmpws) ───────────────────────
 export BASHD_MARK_FILE="/tmp/bashd_marks_$$"
-trap 'rm -f "$BASHD_MARK_FILE" "$BASHD_LAST_CMD_FILE"' EXIT
+bashd_on_exit() {
+  rm -f "${BASHD_MARK_FILE:-}" "${BASHD_LAST_CMD_FILE:-}"
+  if [[ -n "${TMPWS_DIR:-}" && -d "${TMPWS_DIR}" ]]; then
+    rm -rf -- "$TMPWS_DIR"
+  fi
+}
+trap bashd_on_exit EXIT
 
 # ── CD-requiring helpers ─────────────────────────────────────────────
 # These wrappers eval the script output so cd commands affect the shell.
-_bashd_cd_helpers="hop ndir crush ld cdch"
 
-crush() { eval "$(bashd crush)"; }
-ld()    { eval "$(bashd ld)"; }
+crush() { eval "$(bashd crush "$@")"; }
+ld()    { eval "$(bashd ld "$@")"; }
 hop()   { eval "$(bashd hop "$@")"; }
 ndir()  { eval "$(bashd ndir "$@")"; }
 cdch()  { eval "$(bashd cdch "$@")"; }
@@ -72,7 +77,7 @@ tmpws() {
 
 qs() {
   local p
-  if [[ "${1:-}" == "-f" || "${1:-}" == "--file" ]]; then
+  if [[ "${1:-}" == "-f" || "${1:-}" == "--file" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     bashd qs "$@"
   else
     p=$(bashd qs "$@")

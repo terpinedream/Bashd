@@ -8,10 +8,14 @@
 #   bashd alias                  Print alias definitions
 
 _self_dir="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-if [[ -d "$_self_dir/core" ]]; then
+if [[ -n "${BASHD_ROOT:-}" && -d "$BASHD_ROOT/core" ]]; then
+  :
+elif [[ -d "$_self_dir/core" ]]; then
   BASHD_ROOT="$_self_dir"
 elif [[ -d "$_self_dir/bashd-scripts/core" ]]; then
   BASHD_ROOT="$_self_dir/bashd-scripts"
+elif [[ -d /usr/share/bashd/core ]]; then
+  BASHD_ROOT="/usr/share/bashd"
 else
   BASHD_ROOT="$_self_dir"
 fi
@@ -69,12 +73,12 @@ get_full_desc() {
   cleanme) echo "Clear caches: no flag = system + pacman; -p pacman only (root); -s system only (~/.cache, Trash)." ;;
   wrap) echo "Move loose files into a dir: wrap = into single subdir; wrap <dir> = into that dir; wrap -c <name> = create dir and move files; wrap -c -a <name> = create dir and move files + dirs." ;;
   crush) echo "Move CWD contents into parent and remove empty CWD. Source bashd-init.sh so running crush also cds to parent (default)." ;;
-  uwrap) echo "Unpack directories in CWD: uwrap unpacks all; uwrap path unpacks that dir (if in CWD: move; if outside CWD: copy to CWD)." ;;
-  namechange) echo "Mass rename: namechange \"file.txt\" -> file-1.txt, file-2.txt, ... (ignores dirs)." ;;
+  uwrap) echo "Unpack directories in CWD: uwrap unpacks all; uwrap path unpacks that dir (if in CWD: move; if outside CWD: copy to CWD). Keeps original names; -p prefixes with the source dir name. Inverse of wrap/stick/split." ;;
+  namechange) echo "Mass rename: namechange \"file.txt\" -> 1_file.txt, 2_file.txt, ... (underscore separator; ignores dirs)." ;;
   pull) echo "Move one file/dir to parent: pull <file>." ;;
   bring) echo "Copy a file or directory into CWD: bring <path>. Complements pull (which moves to parent)." ;;
   stick) echo "Create dir and move items whose name contains dir name: stick [-i] [-w] <dir_name>; -i case-insensitive, -w whole-word only. Direct children of CWD only." ;;
-  flatten) echo "Move all files from subdirs (any depth) into CWD, prefix each filename with its path (e.g. a/b/file.txt -> a_b_file.txt); then remove empty dirs. Symlinks moved as-is." ;;
+  flatten) echo "Move all files from subdirs (any depth) into CWD, prefix each filename with its path (e.g. a/b/file.txt -> a_b_file.txt); then remove empty dirs. Regular files only." ;;
   nest) echo "Create subdir from filename prefix (first delimiter, default _): prefix_rest -> prefix/rest; one level per run. nest [delim] for custom delimiter. Files with no delimiter stay in CWD." ;;
   hop) echo "Quick dir jumps: hop N = cd up N levels; hop name = cd to nearest parent whose basename matches name (case-insensitive). Source bashd-init.sh so hop also cds (like crush)." ;;
   ld) echo "Cd to the last-used directory (previous CWD). Source bashd-init.sh so the shell records CWD on each prompt and ld changes directory. No args." ;;
@@ -83,7 +87,7 @@ get_full_desc() {
   tmpws) echo "Create a temp directory, cd into it, and remove it when the shell exits. -c/--copy: copy CWD contents into the temp dir first. -r/--return: leave temp workspace and return to original dir. Source bashd-init.sh so tmpws also cds; the dir is deleted on terminal close/exit." ;;
   qs) echo "Quick navigation: qs = pick from common dirs (HOME, Documents, Downloads, etc.) and drill down; qs -s PATTERN = fuzzy search directories; qs -f PATTERN = search for file and open in \$EDITOR. Source bashd-init.sh so qs (and qs -s) cd into the chosen directory." ;;
   bm) echo "Directory bookmarks: bm -a [dir] <name> to save (CWD if dir omitted); bm <name> to jump; bm -l to list; bm -d <name> to delete. Names can be numbers or strings (e.g. bm -a . work, then bm work). Source bashd-init.sh so bm <name> cds." ;;
-  clip) echo "Copy a file's contents to clipboard: clip <filename>. Uses wl-copy, xclip, xsel, pbcopy, or clip.exe (first available)." ;;
+  clip) echo "Copy a file's contents to clipboard: clip <filename>. With no args and a pipe, copies stdin (ls | clip). Uses wl-copy, xclip, xsel, pbcopy, or clip.exe." ;;
   clipd) echo "Copy multiple files to clipboard with separators: clipd file1 file2 ... Each file is preceded by a # /absolute/path/to/file header line. Uses same clipboard tools as clip." ;;
   cbwrite) echo "Write clipboard contents to a file (inverse of clip): cbwrite <filename>. Refuses if file exists; -f to overwrite, -a to append. Uses wl-paste, xclip -o, xsel -o, pbpaste, or powershell.exe." ;;
   sized) echo "Show largest files or directories in CWD, ranked by size. sized = top 10 files; -d = directories; -r = recursive; -n N = top N. Flags combinable. Uses du + sort." ;;
@@ -102,7 +106,7 @@ get_full_desc() {
   byext) echo "Move loose files in CWD into subdirs by extension: file.pdf -> pdf/file.pdf; files with no extension go into noext/." ;;
   bydate) echo "Move loose files in CWD into date subdirs by mtime. Default: YYYY/MM/DD. -M for YYYY/MM only. bydate [-M]." ;;
   dedupe) echo "Find duplicate files by content hash (sha256sum/shasum -a 256); keep first in place, move rest to _dupes/ with disambiguated names. -r = recurse into subdirs. Regular files only." ;;
-  archive) echo "Archive to remote/HDD: options -w work, -i image, -v video, -k keys, -c crypt, -p path." ;;
+  archive) echo "Archive to remote/HDD: options -w work, -i image, -v video, -e extra, -k keys, -c crypt, -p path." ;;
   bak) echo "Backup files: bak <file> [file2] ... renames each to name.ext.bak and creates a working copy. bak * backs up all files in CWD. Skips directories and existing .bak files." ;;
   ubak) echo "Restore .bak files: ubak <file.bak> or ubak (all in CWD). If identical, removes .bak. If original differs: -k to keep original and discard .bak, -r to revert (replace original with .bak), -f alias for -k." ;;
   bkup) echo "Backup CWD to a directory: bkup setup <path> to set default; then bkup or bkup -f; or bkup [-f] <path> to override; -f overwrites if destination not empty." ;;
@@ -149,7 +153,7 @@ show_chart() {
   _item "namechange" "Mass rename in CWD: namechange \"file.txt\""
   _item "undo" "Reverse last rename (single-level)"
   _item "wrap" "Move files into dir; -c create; -c -a +dirs"
-  _item "uwrap" "Unpack dirs into CWD; (copy if outside)"
+  _item "uwrap" "Unpack dirs into CWD; keep names; -p prefix"
   _item "nest" "prefix_rest -> prefix/rest; one level; [delim]"
   _item "flatten" "Move subdir files to CWD, prefix with path"
   _item "stick" "Create dir, move items containing name; -i -w"
@@ -161,7 +165,7 @@ show_chart() {
   _item "qc" "Quick delete: pick files to remove; qc [pattern]"
   _item "bak" "Backup files: bak <file> ... or bak * for all"
   _item "ubak" "Restore/clean .bak files; smart diff; -k -r -f"
-  _item "clip" "Copy a file's contents to clipboard"
+  _item "clip" "Copy a file or stdin to clipboard"
   _item "clipd" "Copy multiple files to clipboard; # separators"
   _item "cbwrite" "Clipboard -> file; -f overwrite, -a append"
   _item "cpath" "Copy CWD or file/dir path to clipboard"
@@ -187,7 +191,7 @@ show_chart() {
   _item "cleanme" "Clear caches: -p pacman, -s system, or both"
   _item "paclock" "Remove db.lck when pacman is stuck (root)"
   _item "topd" "Top 3 by CPU; 1/2/3 to kill. --ignore NAME"
-  _item "archive" "Archive to remote/HDD: -w/-i/-v/-k/-c/-p"
+  _item "archive" "Archive to remote/HDD: -w/-i/-v/-e/-k/-c/-p"
   _item "bkup" "Backup CWD: bkup setup <path>; then bkup"
   _item "pullfrom" "Pull from remote: pullfrom <remote> <local>"
   _item "pushto" "Push to remote: pushto <local> <remote>"
@@ -271,12 +275,42 @@ show_aliases() {
   fi
 
   echo "# Bashd aliases (paste into your shell rc, or source bashd-init.sh):"
+  echo "# CD-requiring helpers need bashd-init.sh (these match its wrappers)."
   for cmd in "${cmds[@]}"; do
-    if is_cd_helper "$cmd"; then
-      echo "${cmd}() { eval \"\$(bashd ${cmd} \"\\\$@\")\"; }"
-    else
-      echo "alias ${cmd}='bashd ${cmd}'"
-    fi
+    case "$cmd" in
+      crush) echo 'crush() { eval "$(bashd crush "$@")"; }' ;;
+      ld)    echo 'ld() { eval "$(bashd ld "$@")"; }' ;;
+      hop)   echo 'hop() { eval "$(bashd hop "$@")"; }' ;;
+      ndir)  echo 'ndir() { eval "$(bashd ndir "$@")"; }' ;;
+      cdch)  echo 'cdch() { eval "$(bashd cdch "$@")"; }' ;;
+      bm)
+        echo 'bm() {'
+        echo '  if [[ "${1:-}" == "-a" || "${1:-}" == "-d" || "${1:-}" == "-l" ]]; then bashd bm "$@"; else eval "$(bashd bm "$@")"; fi'
+        echo '}'
+        ;;
+      mark)
+        echo 'mark() {'
+        echo '  if [[ "${1:-}" == "-a" || "${1:-}" == "-l" ]]; then bashd mark "$@"; else eval "$(bashd mark "$@")"; fi'
+        echo '}'
+        ;;
+      tmpws)
+        echo 'tmpws() {'
+        echo '  local need_cwd=false'
+        echo '  for a in "$@"; do [[ "$a" == "-c" || "$a" == "--copy" ]] && need_cwd=true; done'
+        echo '  if [[ "${1:-}" == "-r" || "${1:-}" == "--return" ]]; then eval "$(bashd tmpws "$@")"'
+        echo '  elif $need_cwd; then eval "$(bashd tmpws "$@" "$(pwd)")"'
+        echo '  else eval "$(bashd tmpws "$@")"; fi'
+        echo '}'
+        ;;
+      qs)
+        echo 'qs() {'
+        echo '  if [[ "${1:-}" == "-f" || "${1:-}" == "--file" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then bashd qs "$@"; else'
+        echo '    local p; p=$(bashd qs "$@"); [[ -n "$p" && -d "$p" ]] && cd "$p"'
+        echo '  fi'
+        echo '}'
+        ;;
+      *) echo "alias ${cmd}='bashd ${cmd}'" ;;
+    esac
   done
 }
 
@@ -333,8 +367,4 @@ if [[ -z "$script_path" ]]; then
   exit 1
 fi
 
-if is_cd_helper "$cmd"; then
-  exec "$script_path" "$@"
-else
-  exec "$script_path" "$@"
-fi
+exec "$script_path" "$@"

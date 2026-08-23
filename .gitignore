@@ -1,4 +1,24 @@
+# Local scratch for manual tests (see CONTRIBUTING.md)
 test_sandbox/
+
+# VHS source for demo.gif — keep the gif, not the tape
 demo.tape
+
+# Personal notes / one-off helpers
 FUTURE.md
 scripts/update-aur.sh
+
+# Local clone of origin/aur (PKGBUILD lives on that branch, not main)
+AUR/
+
+# makepkg leftovers (build these on the aur branch, not main)
+pkg/
+src/
+*.pkg.tar.*
+.SRCINFO
+
+# OS / editor
+.DS_Store
+*~
+*.swp
+*.swo

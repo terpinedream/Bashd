@@ -13,15 +13,14 @@ assert_exists "a_file1.txt" && assert_exists "a_b_file2.txt" && pass
 teardown_sandbox
 
 # ── nest + flatten round-trip ─────────────────────────────────────────
-begin_test "nest then flatten produces files in CWD"
+begin_test "nest then flatten restores original names"
 setup_sandbox
 touch "photos_sunset.jpg" "photos_beach.jpg"
 "$BASHD" nest >/dev/null 2>&1
-assert_exists "photos"
+assert_exists "photos/sunset.jpg"
 "$BASHD" flatten >/dev/null 2>&1
-count=$(find . -maxdepth 1 -type f | wc -l)
-count="${count// /}"
-assert_equals "2" "$count" && pass
+assert_exists "photos_sunset.jpg" && assert_exists "photos_beach.jpg"
+assert_not_exists "photos" && pass
 teardown_sandbox
 
 print_summary

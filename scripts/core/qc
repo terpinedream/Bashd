@@ -7,10 +7,13 @@ usage() {
     echo "Usage: qc [pattern]" >&2
     echo "  qc            List all items in CWD and pick to delete" >&2
     echo "  qc <pattern>  Filter items by substring first" >&2
-    exit 1
 }
 
-[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && usage
+[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
+
+source "$(dirname "$(readlink -f "$0")")/../_bashd_files"
+bashd_refuse_home_root || exit 1
+
 pattern="${1:-}"
 
 items=()

@@ -6,7 +6,8 @@
 # Use case: after downloading a file (e.g. in Firefox), run cdch to jump to that file's directory.
 
 usage() {
-  echo -e "Usage: cdch\n  Cd to the directory of the most recently modified file."
+  echo "Usage: cdch" >&2
+  echo "  Cd to the directory of the most recently modified file." >&2
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
